@@ -26,4 +26,4 @@ flt_tim_data <- read_sas("PISA2022/FLT_SAS/CY08MSP_FLT_TIM.SAS7BDAT")
 
 
 stu_cog_data <- read_sas("PISA2022/STU_COG_SAS/CY08MSP_STU_COG.SAS7BDAT")
-stu_tim_data <- read_sas("PISA2022/STU_TIM_SAS/CY08MSP_TIM.SAS7BDAT")
+stu_tim_data <- read_sas("PISA2022/STU_TIM_SAS/CY08MSP_STU_TIM.SAS7BDAT")

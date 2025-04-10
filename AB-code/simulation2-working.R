@@ -34,21 +34,12 @@ generate_param <- function(I) {
   return(param)
 }
 
+
+
 simulation_abe2 <- function(N, n1, n2, skup, param1, param2, theta1, theta2) {
   # Initialize result vectors
-  Mantel     <- Bres     <- Bres2     <- Log     <- SIB     <- rep(NA, N)
-  MantelStat <- BresStat <- Bres2Stat <- LogStat <- SIBStat <- rep(NA, N)
-  
-  # Helper function to safely extract stats
-  safe_stat <- function(expr, df = NULL, pval_fun = NULL) {
-    tryCatch({
-      stat <- eval(expr)
-      pval <- if (!is.null(pval_fun)) pval_fun(stat, df) else stat
-      list(stat = stat, pval = pval)
-    }, error = function(e) {
-      list(stat = NA, pval = NA)
-    })
-  }
+  Mantel     <- MantelLow <- MantelHigh <-  Bres     <- Bres2     <- Log     <- SIB     <- cSIB <-  rep(NA, N)
+  MantelStat  <- MantelLowStat <- MantelHighStat <- BresStat <- Bres2Stat <- LogStat <- SIBStat <- cSIBStat <- rep(NA, N)
   
   for (i in 1:N) {
     # Generate data for each group
@@ -56,51 +47,66 @@ simulation_abe2 <- function(N, n1, n2, skup, param1, param2, theta1, theta2) {
     data2 <- rmvlogis(n2, param2, IRT = TRUE, link = "logit", z.vals = matrix(theta2))
     data  <- rbind(data1, data2)
     
+    # Compute total score
+    total_scores <- rowSums(data)
+    mean_score <- mean(total_scores)
+    
+    # Split data and grouping vector
+    data_low  <- data[total_scores <= mean_score, ]
+    skup_low  <- skup[total_scores <= mean_score]
+    data_high <- data[total_scores >  mean_score, ]
+    skup_high <- skup[total_scores >  mean_score]
+    
     # Mantel-Haenszel
-    res <- safe_stat(quote(difMH(data, skup, focal.name = 1, correct = TRUE, MHstat = "MHChisq", exact = FALSE)[[1]][1]), df = 1, pval_fun = pchisq_lower)
-    MantelStat[i] <- res$stat
-    Mantel[i]     <- res$pval
+    help <- try(difMH(data, skup, focal.name = 1, correct = TRUE, MHstat = "MHChisq", exact = FALSE)[[1]][1], silent = TRUE)
+    MantelStat[i] <- help
+    Mantel[i] <- if (is.numeric(help)) 1 - pchisq(help, 1) else NA
     
-    # Breslow-Day
-    res <- safe_stat(quote(difBD(data, skup, focal.name = 1)[[1]][1, 3]))
-    BresStat[i] <- res$stat
-    Bres[i]     <- res$pval
+    # Mantel-Haenszel Low
+    help <- try(difMH(data_low, skup_low, focal.name = 1, correct = TRUE, MHstat = "MHChisq", exact = FALSE)[[1]][1], silent = TRUE)
+    MantelLowStat[i] <- help
+    MantelLow[i] <- if (is.numeric(help)) 1 - pchisq(help, 1) else NA
     
-    # Breslow-Day (trend)
-    res <- safe_stat(quote(difBD(data, skup, focal.name = 1, BDstat = "trend")[[1]][1, 3]))
-    Bres2Stat[i] <- res$stat
-    Bres2[i]     <- res$pval
+    # Mantel-Haenszel High
+    help <- try(difMH(data_high, skup_high, focal.name = 1, correct = TRUE, MHstat = "MHChisq", exact = FALSE)[[1]][1], silent = TRUE)
+    MantelHighStat[i] <- help
+    MantelHigh[i] <- if (is.numeric(help)) 1 - pchisq(help, 1) else NA
     
-    # Logistic regression DIF
-    res <- safe_stat(quote(difLogistic(data, skup, focal.name = 1)[[1]][1]), df = 2, pval_fun = pchisq_lower)
-    LogStat[i] <- res$stat
-    Log[i]     <- res$pval
+    # Breslow-Day Test
+    help <- try(difBD(data, skup, focal.name = 1)[[1]][1, 3], silent = TRUE)
+    BresStat[i] <- help
+    Bres[i] <- if (is.numeric(help)) help else NA
+    
+    # Breslow-Day (trend) Test
+    help <- try(difBD(data, skup, focal.name = 1, BDstat = "trend")[[1]][1, 3], silent = TRUE)
+    Bres2Stat[i] <- help
+    Bres2[i] <- if (is.numeric(help)) help else NA
+    
+    # Logistic Regression DIF Test
+    help <- try(difLogistic(data, skup, focal.name = 1)[[1]][1], silent = TRUE)
+    LogStat[i] <- help
+    Log[i] <- if (is.numeric(help)) 1 - pchisq(help, 2) else NA
     
     # SIBTEST (assumes first item is tested; adapt if needed)
-    res <- safe_stat(quote(difSIBTEST(data, skup, focal.name = 1)[[1]][1, 3]))
-    SIBStat[i] <- res$stat
-    SIB[i]     <- res$pval
-    
+    help <- try(difSIBTEST(data, skup, focal.name = 1, type = 'udif', purify = FALSE)[[3]][1], silent = TRUE)
+    SIBStat[i] <- help
+    SIB[i]    <- if (is.numeric(help)) 1 - pchisq(help, 1) else NA
+    #SIB[i]     <- safe_stat(quote(difSIBTEST(data, skup, focal.name = 1, purify = FALSE)[[4]][1]))
+    help <- try(difSIBTEST(data, skup, focal.name = 1, type = 'nudif', purify = FALSE)[[3]][1], silent = TRUE)
+    cSIBStat[i] <- help
+    cSIB[i]    <- if (is.numeric(help)) 1 - pchisq(help, 1) else NA
     # Progress
     message(sprintf("Completed iteration %d at %s", i, date()))
   }
   
   # Combine results
-  mat     <- rbind(Mantel, Bres, Bres2, Log, SIB)
-  matStat <- rbind(MantelStat, BresStat, Bres2Stat, LogStat, SIBStat)
+  mat     <- rbind(Mantel,MantelLow, MantelHigh, Bres, Bres2, Log, SIB, cSIB)
+  matStat <- rbind(MantelStat,MantelLowStat, MantelHighStat, BresStat, Bres2Stat, LogStat, SIBStat, cSIBStat)
   
-  rownames(mat)     <- c("Mantel", "Bres", "Bres2", "Log", "SIB")
-  rownames(matStat) <- c("MantelStat", "BresStat", "Bres2Stat", "LogStat", "SIBStat")
+  rownames(mat)     <- c("Mantel","MantelLow", "MantelHigh", "Bres", "Bres2", "Log", "SIB", "cSIB")
+  rownames(matStat) <- c("MantelStat","MantelLowStat", "MantelHighStat", "BresStat", "Bres2Stat", "LogStat", "SIBStat", "cSIBTSTat")
   
   return(list(pvalues = mat, statistics = matStat))
-}
-
-# Helper for p-value calculation
-pchisq_lower <- function(stat, df) {
-  if (is.numeric(stat)) {
-    return(1 - pchisq(stat, df))
-  }
-  return(NA)
 }
 
 
@@ -171,11 +177,13 @@ res_nonunif <- simul_total2(N = 10, n_total = 1000, rat_n = c(2,1), I = 5, mu_R 
 
 # to do --------------------------------------------------------------
 # multiple items ???
-# add sibtest and NU mantel haensel
+# add NU variants
 
 # look into specific libraries 
 
 ?difMH
 ?difSIBTEST
-
+?
+difSIBTEST
+?mantelHaenszel
 #####################################################################
