@@ -161,7 +161,7 @@ simul_total2 <- function(N, n_total, rat_n, I, mu_R, mu_F, type = "alpha", diffs
       param2_ab_mod <- param1_ab
       param2_ab_mod[1, 1] <- param1_ab[1, 1] + d # shift difficulty
       
-      label <- paste0("Unif_DIF_d", d)
+      label <- paste0("Unif_DIF_delta", d)
       results[[label]] <- simulation_abe2(N,n1,n2,skup, param1_ab, param2_ab_mod, theta1_ab, theta2_ab, statistics)
     }
     
@@ -194,11 +194,11 @@ res_alpha <- simul_total2(N = 10, n_total = 500, rat_n = c(1,2), I = 40, mu_R = 
 )
 res_alpha$alpha$pvalues
 # Uniform DIF
-res_unif <- simul_total2(N = 10000, n_total = 1000, rat_n = c(5,2), I = 5, mu_R = 0, mu_F = -1, 
+res_unif <- simul_total2(N = 10, n_total = 1000, rat_n = c(1,2), I = 5, mu_R = 0, mu_F = -1, 
                         type = "unif", diffs = c(0.5,1,2,4))
 
 # Non-uniform DIF
-res_nonunif <- simul_total2(N = 10000, n_total = 1000, rat_n = c(2,1), I = 5, mu_R = 0, mu_F = -1, 
+res_nonunif <- simul_total2(N = 10, n_total = 1000, rat_n = c(1,2), I = 5, mu_R = 0, mu_F = -1, 
                            type = "nonunif", diffs = c(0.4,0.6,0.8,1))
 
 
@@ -240,11 +240,6 @@ df_results <- run_all_statistics()
 print(df_results)
 
 
-
-
-
-
-
 # to do --------------------------------------------------------------
 # multiple items ???
 # make a time and sample graph
@@ -254,25 +249,105 @@ print(df_results)
 #####################################################################
 #Estimate of Type I error
 
-
-est_alpha <- apply(res_alpha$alpha$pvalues[1:3,], 1, function(x) {
-  sum(x <= 0.01, na.rm = TRUE) / sum(!is.na(x))
-})
-est_alpha2 <- apply(res_alpha$alpha$pvalues[4:9,], 1, function(x) {
-  sum(x <= 0.05, na.rm = TRUE) / sum(!is.na(x))
-})
-est_alpha_total <- c(est_alpha, est_alpha2)
-alphaNA <- apply(res_alpha$alpha$pvalues,1,function(x){sum(is.na(x))})
-
-
-confintAlpha <- rep(NA,length(est_alpha_total))
-for(i in 1:length(est_alpha_total)){
-  confintAlpha[i]=paste("(",round(binom.test(round((1000-alphaNA[i])*est_alpha_total[i]),n=(1000-alphaNA[i]))$conf.int[1],3),", ",
-                       round(binom.test(round((1000-alphaNA[i])*est_alpha_total[i]),n=(1000-alphaNA[i]))$conf.int[2],3),")",sep="")                     
+calculate_alpha_estimates <- function(res_alpha) {
+  # Calculate est_alpha (proportion of p-values <= 0.01 for rows 1:3)
+  est_alpha <- apply(res_alpha$alpha$pvalues[1:3,], 1, function(x) {
+    sum(x <= 0.01, na.rm = TRUE) / sum(!is.na(x))
+  })
+  
+  # Calculate est_alpha2 (proportion of p-values <= 0.05 for rows 4:9)
+  est_alpha2 <- apply(res_alpha$alpha$pvalues[4:9,], 1, function(x) {
+    sum(x <= 0.05, na.rm = TRUE) / sum(!is.na(x))
+  })
+  
+  # Combine both into a single vector (est_alpha_total)
+  est_alpha_total <- c(est_alpha, est_alpha2)
+  
+  # Calculate the number of NAs in each row
+  alphaNA <- apply(res_alpha$alpha$pvalues, 1, function(x) { sum(is.na(x)) })
+  
+  # Calculate confidence intervals for each estimate
+  confintAlpha <- rep(NA, length(est_alpha_total))
+  for (i in 1:length(est_alpha_total)) {
+    confintAlpha[i] <- paste(
+      "(", 
+      round(binom.test(round((1000 - alphaNA[i]) * est_alpha_total[i]), n = (1000 - alphaNA[i]))$conf.int[1], 3), ", ",
+      round(binom.test(round((1000 - alphaNA[i]) * est_alpha_total[i]), n = (1000 - alphaNA[i]))$conf.int[2], 3), 
+      ")", sep = ""
+    )
+  }
+  # Return the results as a list
+  return(list(est_alpha_total = est_alpha_total,
+              alphaNA = alphaNA, 
+              confintAlpha = confintAlpha))
 }
-confintAlpha
 
 
+est_alpha_result<- calculate_alpha_estimates(res_alpha)
+est_alpha_frame <- data.frame(
+  est_alpha_total = est_alpha_result$est_alpha_total, 
+  alphaNA = est_alpha_result$alphaNA, 
+  confintAlpha = est_alpha_result$confintAlpha
+)
+
+# Set the row names to match the names in alphaNA
+rownames(est_alpha_frame) <- names(est_alpha_result$alphaNA)
+
+# Print the dataframe
+print(est_alpha_frame)
 ############################################################################
 #Estimation of power of the test
-sila400[,1]=apply(data1,1,function(x){mean(x<=0.05,na.rm=TRUE)})
+
+calculate_power_and_NA <- function(data, diffs = c(0.4, 0.6, 0.8, 1), type = c("nonunif", "unif")) {
+  
+  # Ensure 'type' is either 'nonunif' or 'unif'
+  if (!type %in% c("nonunif", "unif")) {
+    stop("Invalid type. Please specify either 'nonunif' or 'unif'.")
+  }
+  
+  # Get the prefix based on 'type' argument
+  prefix <- ifelse(type == "nonunif", "NonUnif_DIF_delta", "Unif_DIF_delta")
+  
+  # Get the number of rows from the first pvalues matrix (assuming all have the same structure)
+  num_rows <- nrow(data[[paste0(prefix, diffs[1])]]$pvalues)
+  
+  # Initialize the result matrices for both sets of rows
+  est_power <- matrix(NA, nrow = num_rows, ncol = length(diffs)) # Dynamic number of rows
+  NAValues <- matrix(NA, nrow = num_rows, ncol = length(diffs)) # Dynamic number of rows
+  
+  # Row labels (methods names)
+  method_labels <- rownames(data[[paste0(prefix, diffs[1])]]$pvalues)
+  
+  # Loop through each delta in diffs
+  for (i in 1:length(diffs)) {
+    delta <- diffs[i]
+    
+    # Access the pvalues for the current delta
+    pvalues <- data[[paste0(prefix, delta)]]$pvalues
+    
+    # Calculate est_power (proportion of p-values <= 0.01 for rows 1:3, <= 0.05 for rows 4:9)
+    est_power[1:3, i] <- apply(pvalues[1:3, ], 1, function(x) { mean(x <= 0.01, na.rm = TRUE) })
+    est_power[4:9, i] <- apply(pvalues[4:9, ], 1, function(x) { mean(x <= 0.05, na.rm = TRUE) })
+    
+    # Calculate NA400 (count of NA values)
+    NAValues[1:3, i] <- apply(pvalues[1:3, ], 1, function(x) { sum(is.na(x)) })
+    NAValues[4:9, i] <- apply(pvalues[4:9, ], 1, function(x) { sum(is.na(x)) })
+  }
+  
+  # Add row labels
+  rownames(est_power) <- method_labels
+  rownames(NAValues) <- method_labels
+  
+  # Add column labels (diffs values)
+  colnames(est_power) <- paste0("Delta_", diffs)
+  colnames(NAValues) <- paste0("Delta_", diffs)
+  
+  # Return the two matrices
+  return(list(est_power = est_power, NAValues = NAValues))
+}
+
+
+diffsNU <- c(0.4, 0.6, 0.8, 1)  # Example diffs
+diffsU <- c(0.5,1,2,4)
+est_power_nonufif <- calculate_power_and_NA(res_nonunif, diffsNU, type = "nonunif")
+est_power_unif <- calculate_power_and_NA(res_unif, diffsU, type = "unif")
