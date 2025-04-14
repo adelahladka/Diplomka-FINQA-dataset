@@ -5,7 +5,7 @@ library(difR)
 
 set.seed(123)
 
-load("ABE-code\\simulation-abe.RData")
+load("simulation-abe.RData")
 
 ###################################################################################
 #Hyperparameters
@@ -202,6 +202,7 @@ simul_total2 <- function(N, n_total, rat_n, I, mu_R, mu_F, type = "alpha", diffs
   
   end_time <- Sys.time()
   time_taken <- end_time - start_time
+  #print(end_time, start_time)
   message(sprintf("Total time for simulation: %s", time_taken))
   
   if (timeMeasure) return(time_taken)
@@ -242,7 +243,7 @@ run_all_statistics <- function() {
     
     # Run the simulation with the selected method and record time
     result <- simul_total2(
-      N = 1000,             # Number of replications
+      N = 100,             # Number of replications
       n_total = 500,        # Total sample size
       rat_n = c(1, 2),      # Group size ratio (focal:reference)
       I = 40,               # Number of items
@@ -306,7 +307,7 @@ calculate_alpha_estimates <- function(res_alpha) {
               alphaNA = alphaNA, 
               confintAlpha = confintAlpha))
 }
-View(res_alpha$alpha$pvalues)
+
 
 est_alpha_result<- calculate_alpha_estimates(res_alpha)
 est_alpha_frame <- data.frame(
@@ -318,7 +319,7 @@ est_alpha_frame <- data.frame(
 # Set the row names to match the names in alphaNA
 rownames(est_alpha_frame) <- names(est_alpha_result$alphaNA)
 print(est_alpha_frame)
-
+write.csv(est_alpha_frame, "est_alpha.csv")
 ################################################################################
 #Estimation of power of the test
 
@@ -385,17 +386,17 @@ est_power_unif <- calculate_power_and_NA(res_unif, diffsU, type = "unif")
 I_values <- c(5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80)
 n_total_value <- c(100,200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1400)
 # Prepare lists to store the results
-table1_list <- list()
-table2_list <- list()
+table12_list <- list()
+table22_list <- list()
 
 # Loop through I values
-for (I_value in I_values) {
+for (n_val in n_total_value) {
   print(n_val)
   res_alpha2 <- simul_total2(
     N = 1000,
-    n_total = 500,
+    n_total = n_val,
     rat_n = c(1, 2),
-    I = I_value,
+    I = 30,
     mu_R = 0,
     mu_F = -1,
     type = "alpha",
@@ -411,19 +412,19 @@ for (I_value in I_values) {
 est_alpha_result2 <- calculate_alpha_estimates(res_alpha2)
   
   # Add current I to the tables
-table1 <- est_alpha_result2$est_alpha_total
-table2 <- est_alpha_result2$alphaNA
+table12 <- est_alpha_result2$est_alpha_total
+table22 <- est_alpha_result2$alphaNA
   
-table1$I <- I_val
-table2$I <- I_val
+table12$n <- n_val
+table22$n <- n_val
   
-  table1_list[[as.character(n_val)]] <- table1
-  table2_list[[as.character(n_val)]] <- table2
+  table12_list[[as.character(n_val)]] <- table12
+  table22_list[[as.character(n_val)]] <- table22
 }
 
 # Combine all into final tables
-final_table1 <- do.call(rbind, table1_list)
-final_table2 <- do.call(rbind, table2_list)
+final_table12 <- do.call(rbind, table12_list)
+final_table22 <- do.call(rbind, table22_list)
 
 # View results
 print(final_table1) # I values variable, n = 500 (I think)
@@ -458,94 +459,8 @@ write.csv(est_power_unif, "est_unif.csv")
 write.csv(est_power_nonufif, "est_nonunif.csv")
 write.csv(final_table1, "parameter-I.csv")
 write.csv(final_table1, "parameter-n.csv")
-write.csv(est_alpha_frame, "est_alpha.csv")
+
 save.image(file = "simulation-abe.RData")
 
-
-
-############################################################################
-#Plotting
-
-library(dplyr)
-library(ggplot2)
-library(tidyr)
-
-#Type I error
-
-est_alpha_frame2 <- est_alpha_frame %>%
-  tibble::rownames_to_column("Method") %>%
-  separate(confintAlpha, into = c("Lower", "Upper"), sep = ", ", remove = FALSE) %>%
-  mutate(
-    Lower = as.numeric(gsub("[()]", "", Lower)),
-    Upper = as.numeric(gsub("[()]", "", Upper))
-  )
-
-ggplot(est_alpha_frame2, aes(x = Method, y = est_alpha_total)) +
-  geom_bar(stat = "identity", fill = "steelblue", width = 0.6) +
-  geom_errorbar(aes(ymin = Lower, ymax = Upper), width = 0.2, color = "black") +
-  geom_hline(yintercept = 0.05, linetype = "dashed", color = "red", size = 0.8) +
-  labs(title = "Estimated Type I Error with 95% Confidence Intervals",
-       x = "Method",
-       y = "Estimated Type I Error Rate") +
-  theme_minimal(base_size = 14) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-#################################################################################
-est_powerUnif <- as.data.frame(est_power_unif$est_power)
-
-est_power_long_unif <- est_powerUnif %>%
-  tibble::rownames_to_column("Method") %>%      # move rownames to a column
-  pivot_longer(cols = starts_with("Delta"),     # reshape to long format
-               names_to = "Delta", 
-               values_to = "Power")
-
-
-ggplot(est_power_long_unif, aes(x = Delta, y = Power, color = Method, group = Method)) +
-  geom_line(size = 1) +
-  geom_point(size = 2) +
-  labs(title = "Power by Method Across Different Effect Sizes",
-       x = "Effect Size", y = "Estimated Power") +
-  theme_minimal(base_size = 14) +
-  scale_color_brewer(palette = "Set2") +
-  geom_hline(yintercept = 0.8, linetype = "dashed", color = "grey30")
-
-
-
-est_powerNONUnif <- as.data.frame(est_power_nonufif$est_power)
-
-
-
-est_power_long_nonunif <- est_powerNONUnif %>%
-  tibble::rownames_to_column("Method") %>%  # Add method as a column
-  pivot_longer(cols = starts_with("Delta"), 
-               names_to = "Delta", 
-               values_to = "Power") %>%
-  filter(!is.na(Power))  # Remove missing values
-
-# Plot the data
-ggplot(est_power_long_nonunif, aes(x = Delta, y = Power, color = Method, group = Method)) +
-  geom_line(size = 1) +
-  geom_point(size = 2) +
-  labs(title = "Power by Method Across Different Effect Sizes",
-       x = "Effect Size (Delta)", y = "Estimated Power") +
-  theme_minimal(base_size = 14) +
-  scale_color_brewer(palette = "Set3") +  # Use a palette that supports more than 8 colors
-  geom_hline(yintercept = 0.8, linetype = "dashed", color = "grey30")  # Optional: Add a threshold line for power = 0.8
-
-
-##############################################################
-final_table1$I <- as.numeric(final_table1$I)
-final_table1F <- as.data.frame(final_table1)
-# Reshape the data from wide format to long format
-final_table1_long <- final_table1F %>%
-  pivot_longer(cols = -I, names_to = "Method", values_to = "Type_I_Error")  # Reshape the data
-
-# Plot the data
-ggplot(final_table1_long, aes(x = I, y = Type_I_Error, color = Method, group = Method)) +
-  geom_line(size = 1) +  # Line for each method
-  geom_point(size = 2) +  # Points for each method
-  labs(title = "Type I Error by Number of Items (I)",
-       x = "Number of Items (I)", y = "Type I Error") +
-  theme_minimal(base_size = 14) +
-  scale_color_brewer(palette = "Set3") +  # Use a color palette that supports many categories
-  theme(legend.position = "bottom")  # Position the legend at the bottom
+?difLogistic
+?rmvlogis
