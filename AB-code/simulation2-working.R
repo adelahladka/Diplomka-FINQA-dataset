@@ -1,11 +1,11 @@
 #Simulation from ground up
-rm(list = ls())
+  rm(list = ls())
 library(ltm)
 library(difR)
 
 set.seed(123)
 
-load("ABE-code\\simulation-abe.RData")
+#load("simulation-abe.RData")
 
 ###################################################################################
 #Hyperparameters
@@ -46,425 +46,416 @@ generate_param <- function(I) {
   return(param)
 }
 
-params <- generate_param(50)
 
 # ============================
 # Function: simulation_abe2
 # Purpose: Run a DIF detection simulation with multiple methods
-# ============================
-simulation_abe2 <- function(N, n1, n2, skup, param1, param2, theta1, theta2, 
-                            statistics = list(MantelB = TRUE, MantelNUB = TRUE, BresB = TRUE, LogB = TRUE, SIBB = TRUE, cSIBB = TRUE)) {
+simulation_abe3 <- function(N, n1, n2, skup, param1, param2, theta1, theta2,
+                            statistics = list(MantelB = TRUE, MantelNUB = TRUE, BresB = TRUE, LogB = TRUE, SIBB = TRUE, cSIBB = TRUE), I) {
   
-  # Initialize result storage
-  Mantel <- MantelLow <- MantelHigh <- Bres <- Bres2 <- Log <- SIB <- cSIB <- rep(NA, N)
-  MantelStat <- MantelLowStat <- MantelHighStat <- BresStat <- Bres2Stat <- LogStat <- SIBStat <- cSIBStat <- rep(NA, N)
+  new_matrix <- function() matrix(NA_real_, nrow = I, ncol = N)
+  
+  results <- list(
+    Mantel = new_matrix(), MantelStat = new_matrix(),
+    MantelNormal = new_matrix(), MantelNormalStat = new_matrix(),
+    MantelLow = new_matrix(), MantelLowStat = new_matrix(),
+    MantelHigh = new_matrix(), MantelHighStat = new_matrix(),
+    Bres = new_matrix(), BresStat = new_matrix(),
+    Bres2 = new_matrix(), Bres2Stat = new_matrix(),
+    Log = new_matrix(), LogStat = new_matrix(),
+    SIB = new_matrix(), SIBStat = new_matrix(),
+    cSIB = new_matrix(), cSIBStat = new_matrix()
+  )
   
   for (i in 1:N) {
-    # Simulate response data for each group using IRT model
-    data1 <- rmvlogis(n1, param1, IRT = TRUE, link = "logit", z.vals = matrix(theta1)) # Reference
-    data2 <- rmvlogis(n2, param2, IRT = TRUE, link = "logit", z.vals = matrix(theta2)) # Focal
-    data  <- rbind(data1, data2)
+    data1 <- rmvlogis(n1, param1, IRT = TRUE, link = "logit", z.vals = matrix(theta1))
+    data2 <- rmvlogis(n2, param2, IRT = TRUE, link = "logit", z.vals = matrix(theta2))
+    data <- rbind(data1, data2)
     
-    # Compute total test score and split data by score
     total_scores <- rowSums(data)
     mean_score <- mean(total_scores)
-    data_low  <- data[total_scores <= mean_score, ]
-    skup_low  <- skup[total_scores <= mean_score]
+    data_low <- data[total_scores <= mean_score, ]
+    skup_low <- skup[total_scores <= mean_score]
     data_high <- data[total_scores > mean_score, ]
     skup_high <- skup[total_scores > mean_score]
     
-    # Mantel-Haenszel test (full sample)
     if (statistics$MantelB | statistics$MantelNUB) {
-      help <- try(difMH(data, skup, focal.name = 1, correct = TRUE, MHstat = "MHChisq", exact = FALSE)[[1]][1], silent = TRUE)
-      MantelStat[i] <- help
-      Mantel[i] <- if (is.numeric(help)) 1 - pchisq(help, 1) else NA
+      resstat <- try(difMH(data, skup, focal.name = 1, purify = FALSE), silent = TRUE)
+      if (inherits(resstat, "try-error")) {
+        results$MantelStat[, i] <- rep(NA_real_, I)
+        results$Mantel[, i] <- rep(NA_real_, I)
+        
+        results$MantelNormalStat[, i] <- rep(NA_real_, I)
+        results$MantelNormal[, i] <- rep(NA_real_, I)
+      } else {
+        results$MantelStat[, i] <- resstat[[1]]
+        results$Mantel[, i] <- resstat$p.value
+        
+        
+        results$MantelNormalStat[, i] <- resstat[[1]]
+        results$MantelNormal[, i] <- resstat$p.value
+      }
     }
     
-    # Mantel-Haenszel test (low ability group)
     if (statistics$MantelNUB) {
-      help <- try(difMH(data_low, skup_low, focal.name = 1, correct = TRUE, MHstat = "MHChisq", exact = FALSE)[[1]][1], silent = TRUE)
-      MantelLowStat[i] <- help
-      MantelLow[i] <- if (is.numeric(help)) 1 - pchisq(help, 1) else NA
+      stat_low <- try(difMH(data_low, skup_low, focal.name = 1), silent = TRUE)
+      if (inherits(stat_low, "try-error")) {
+        results$MantelLowStat[, i] <- rep(NA_real_, I)
+        results$MantelLow[, i] <- rep(NA_real_, I)
+      } else {
+        results$MantelLowStat[, i] <- stat_low[[1]]
+        results$MantelLow[, i] <- stat_low$p.value
+      }
+      
+      stat_high <- try(difMH(data_high, skup_high, focal.name = 1), silent = TRUE)
+      if (inherits(stat_high, "try-error")) {
+        results$MantelHighStat[, i] <- rep(NA_real_, I)
+        results$MantelHigh[, i] <- rep(NA_real_, I)
+      } else {
+        results$MantelHighStat[, i] <- stat_high[[1]]
+        results$MantelHigh[, i] <- stat_high$p.value
+      }
     }
     
-    # Mantel-Haenszel test (high ability group)
-    if (statistics$MantelNUB) {
-      help <- try(difMH(data_high, skup_high, focal.name = 1, correct = TRUE, MHstat = "MHChisq", exact = FALSE)[[1]][1], silent = TRUE)
-      MantelHighStat[i] <- help
-      MantelHigh[i] <- if (is.numeric(help)) 1 - pchisq(help, 1) else NA
-    }
-    
-    # Breslow-Day test for homogeneity of odds ratios
     if (statistics$BresB) {
-      help <- try(difBD(data, skup, focal.name = 1)[[1]][1, 3], silent = TRUE)
-      BresStat[i] <- help
-      Bres[i] <- if (is.numeric(help)) help else NA
+      stat1 <- try(difBD(data, skup, focal.name = 1), silent = TRUE)
+      stat2 <- try(difBD(data, skup, focal.name = 1, BDstat = "trend"), silent = TRUE)
+      if (inherits(stat1, "try-error")) {
+        results$BresStat[, i] <- rep(NA_real_, I)
+        results$Bres[, i] <- rep(NA_real_, I)
+      } else {
+        results$BresStat[, i] <- stat1[[1]][,1]
+        results$Bres[, i] <- stat1$p.value
+      }
+      if (inherits(stat2, "try-error")) {
+        results$Bres2Stat[, i] <- rep(NA_real_, I)
+        results$Bres2[, i] <- rep(NA_real_, I)
+      } else {
+        results$Bres2Stat[, i] <- stat2[[1]][,1]
+        results$Bres2[, i] <- stat2$p.value
+      }
     }
     
-    # Breslow-Day trend test
-    if (statistics$BresB) {
-      help <- try(difBD(data, skup, focal.name = 1, BDstat = "trend")[[1]][1, 3], silent = TRUE)
-      Bres2Stat[i] <- help
-      Bres2[i] <- if (is.numeric(help)) help else NA
-    }
-    
-    # Logistic regression DIF test
     if (statistics$LogB) {
-      help <- try(difLogistic(data, skup, focal.name = 1)[[1]][1], silent = TRUE)
-      LogStat[i] <- help
-      Log[i] <- if (is.numeric(help)) 1 - pchisq(help, 2) else NA
+      stat <- try(difLogistic(data, skup, focal.name = 1), silent = TRUE)
+      if (inherits(stat, "try-error")) {
+        results$LogStat[, i] <- rep(NA_real_, I)
+        results$Log[, i] <- rep(NA_real_, I)
+      } else {
+        results$LogStat[, i] <- stat[[1]]
+        results$Log[, i] <- stat$p.value
+      }
     }
     
-    # SIBTEST for uniform DIF
     if (statistics$SIBB) {
-      help <- try(difSIBTEST(data, skup, focal.name = 1, type = 'udif', purify = FALSE)[[3]][1], silent = TRUE)
-      SIBStat[i] <- help
-      SIB[i]    <- if (is.numeric(help)) 1 - pchisq(help, 1) else NA
+      stat <- try(difSIBTEST(data, skup, focal.name = 1, type = 'udif', purify = FALSE), silent = TRUE)
+      if (inherits(stat, "try-error")) {
+        results$SIBStat[, i] <- rep(NA_real_, I)
+        results$SIB[, i] <- rep(NA_real_, I)
+      } else {
+        results$SIBStat[, i] <- stat[[1]]
+        results$SIB[, i] <- stat$p.value
+      }
     }
     
-    # SIBTEST for non-uniform DIF
     if (statistics$cSIBB) {
-      help <- try(difSIBTEST(data, skup, focal.name = 1, type = 'nudif', purify = FALSE)[[3]][1], silent = TRUE)
-      cSIBStat[i] <- help
-      cSIB[i]    <- if (is.numeric(help)) 1 - pchisq(help, 1) else NA
+      stat <- try(difSIBTEST(data, skup, focal.name = 1, type = 'nudif', purify = FALSE), silent = TRUE)
+      if (inherits(stat, "try-error")) {
+        results$cSIBStat[, i] <- rep(NA_real_, I)
+        results$cSIB[, i] <- rep(NA_real_, I)
+      } else {
+        results$cSIBStat[, i] <- stat[[1]]
+        results$cSIB[, i] <- stat$p.value
+      }
     }
     
-    # Print progress
     message(sprintf("Completed iteration %d at %s", i, date()))
   }
   
-  # Combine results
-  mat     <- rbind(Mantel, MantelLow, MantelHigh, Mantel, Bres, Bres2, Log, SIB, cSIB)
-  matStat <- rbind(MantelStat, MantelLowStat, MantelHighStat, MantelStat, BresStat, Bres2Stat, LogStat, SIBStat, cSIBStat)
+  results_df <- lapply(results, function(x) {
+    df <- as.data.frame(x)
+    rownames(df) <- paste0("Item_", 1:I)
+    colnames(df) <- paste0("Sim_", 1:N)
+    df
+  })
   
-  rownames(mat)     <- c("MantelNormal", "MantelLow", "MantelHigh", "Mantel", "Bres", "Bres2", "Log", "SIB", "cSIB")
-  rownames(matStat) <- c("MantelStatNormal", "MantelLowStat", "MantelHighStat", "MantelStat", "BresStat", "Bres2Stat", "LogStat", "SIBStat", "cSIBStat")
-  
-  return(list(pvalues = mat, statistics = matStat)) # Return p-values and statistics
+  return(results_df)
 }
 
 
-# ============================
-# Function: simul_total2
-# Purpose: Wrapper to run multiple simulation scenarios (Type I, uniform DIF, non-uniform DIF)
-# ============================
-simul_total2 <- function(N, n_total, rat_n, I, mu_R, mu_F, type = "alpha", diffs = NULL,
-                         statistics = list(MantelB = TRUE, MantelNUB = TRUE, BresB = TRUE, LogB = TRUE, SIBB = TRUE, cSIBB = TRUE),
-                         timeMeasure = FALSE) {
+
+
+
+simul_total3 <- function(N, n_total, rat_n, I, mu_R, mu_F, 
+                         type = c(0, 0),  # proportions of unif and nonunif DIF
+                         diffs_unif = 0.5, diffs_nonunif = 1,
+                         statistics = list(MantelB = TRUE, MantelNUB = TRUE, BresB = TRUE, LogB = TRUE, SIBB = TRUE, cSIBB = TRUE))
+                         {
   
-  start_time <- Sys.time() # For timing
+  start_time <- Sys.time()
   
-  # Generate group sizes and ability distributions
+  # Setup
   list_ns <- generate_group_sizes(n_total, rat_n)
   n1 <- list_ns$n1
   n2 <- list_ns$n2
-  
   theta1_ab <- rnorm(n1, mean = mu_R, sd = 1)
   theta2_ab <- rnorm(n2, mean = mu_F, sd = 1)
-  
-  # Generate item parameters and group labels
   param1_ab <- generate_param(I)
   param2_ab <- param1_ab
   skup <- c(rep(0, n1), rep(1, n2))
   
-  results <- list()
+  # Determine how many items get DIF
+  n_unif <- if (type[1] > 0) round(type[1] * I) else 0
+  n_nonunif <- if (type[2] > 0) round(type[2] * I) else 0
   
-  if (type == "alpha") {
-    # Type I error — identical parameters
-    results[["alpha"]] <- simulation_abe2(N,n1,n2,skup, param1_ab, param2_ab, theta1_ab, theta2_ab, statistics)
-    
-  } else if (type == "unif") {
-    # Uniform DIF — increase difficulty of first item for focal group
-    for (i in seq_along(diffs)) {
-      d <- diffs[i]
-      param2_ab_mod <- param1_ab
-      param2_ab_mod[1, 1] <- param1_ab[1, 1] + d # increase b
+  # Select DIF items
+  dif_items <- if ((n_unif + n_nonunif) > 0) sample(1:I, n_unif + n_nonunif, replace = FALSE) else integer(0)
+  unif_items <- if (n_unif > 0) dif_items[1:n_unif] else integer(0)
+  nonunif_items <- if (n_nonunif > 0) dif_items[(n_unif + 1):(n_unif + n_nonunif)] else integer(0)
+  
+  # Apply Uniform DIF (adjust difficulty b → param[,1])
+  if (n_unif > 0) {
+    diffs_u <- rep(diffs_unif, length.out = n_unif)
+    param2_ab[unif_items, 1] <- param1_ab[unif_items, 1] + diffs_u
+  }
+  
+  # Apply Non-Uniform DIF (adjust discrimination a → param[,2])
+  if (n_nonunif > 0) {
+    diffs_n <- rep(diffs_nonunif, length.out = n_nonunif)
+    for (j in seq_along(nonunif_items)) {
+      idx <- nonunif_items[j]
+      a_orig <- param1_ab[idx, 2]  # original discrimination
+      c_orig <- param1_ab[idx, 3]  # guessing parameter (usually 0 for 2PL)
+      delta <- diffs_n[j]
       
-      label <- paste0("Unif_DIF_delta", d)
-      results[[label]] <- simulation_abe2(N,n1,n2,skup, param1_ab, param2_ab_mod, theta1_ab, theta2_ab, statistics)
-    }
-    
-  } else if (type == "nonunif") {
-    # Non-uniform DIF — modify discrimination of first item
-    for (i in seq_along(diffs)) {
-      delta <- diffs[i]
-      param2_ab_mod <- param1_ab
-      a_orig <- param1_ab[1, 2]
-      c_orig <- param1_ab[1, 3]
+      # Adjusted discrimination for focal group (2PL logic: more/less sensitive to ability)
+      new_a <- 2 * a_orig / (2 + delta * a_orig / ((1 - c_orig) * log(2)))
       
-      # Formula to adjust 'a' for DIF
-      param2_ab_mod[1, 2] <- 2 * a_orig / (2 + delta * a_orig / ((1 - c_orig) * log(2)))
-      
-      label <- paste0("NonUnif_DIF_delta", delta)
-      results[[label]] <- simulation_abe2(N,n1,n2,skup, param1_ab, param2_ab_mod, theta1_ab, theta2_ab, statistics)
+      param2_ab[idx, 2] <- new_a
     }
   }
+  #print(I)
+  res <- simulation_abe3(N, n1, n2, skup, param1_ab, param2_ab, theta1_ab, theta2_ab, statistics,I)
   
   end_time <- Sys.time()
-  time_taken <- end_time - start_time
-  message(sprintf("Total time for simulation: %s", time_taken))
   
-  if (timeMeasure) return(time_taken)
-  return(results)
+  # Metadata for output
+  metadata <- list(
+    N = N,
+    n_total = n_total,
+    n1 = n1,
+    n2 = n2,
+    rat_n = rat_n,
+    I = I,
+    mu_R = mu_R,
+    mu_F = mu_F,
+    type = type,
+    n_unif = n_unif,
+    n_nonunif = n_nonunif,
+    unif_items = unif_items,
+    nonunif_items = nonunif_items,
+    diffs_unif = diffs_unif,
+    diffs_nonunif = diffs_nonunif,
+    time_taken = end_time - start_time,
+    start_time = start_time,
+    end_time = end_time,
+    statistics = statistics
+  )
+  
+  return(list(results = res, metadata = metadata))
 }
+
 #################################################################################
 #Evaluating------------------------------------------------------------
+res_alpha2 <- simul_total3(N = 1000, n_total = 500, rat_n = c(1,2), I = 50, mu_R = 0, mu_F = 0, 
+                         type = c(0,0), diffs_unif = 0)
 
-# Type I error
-res_alpha <- simul_total2(N = 1000, n_total = 500, rat_n = c(1,2), I = 40, mu_R = 0, mu_F = -1, type = "alpha",statistics = list(SIBB = TRUE, MantelB = TRUE, MantelNUB = TRUE, BresB = TRUE, LogB = TRUE, cSIBB = TRUE)
-)
+res_bothdif <- simul_total3(N = 1000, n_total = 500, rat_n = c(1,2), I = 50, mu_R = 0, mu_F = 0, 
+                           type = c(0.1,0.1), diffs_unif = 0.6, diffs_nonunif = 0.8)
 
-# Uniform DIF
-res_unif <- simul_total2(N = 1000, n_total = 500, rat_n = c(1,2), I = 5, mu_R = 0, mu_F = -1, 
-                        type = "unif", diffs = c(0.5,1,2,4))
+res_udif <- simul_total3(N = 1000, n_total = 500, rat_n = c(1,2), I = 50, mu_R = 0, mu_F = 0, 
+                            type = c(0.1,0), diffs_unif = 0.6)
 
-# Non-uniform DIF
-res_nonunif <- simul_total2(N = 1000, n_total = 500, rat_n = c(1,2), I = 5, mu_R = 0, mu_F = -1, 
-                           type = "nonunif", diffs = c(0.4,0.6,0.8,1))
+res_nondif <- simul_total3(N = 1000, n_total = 500, rat_n = c(1,2), I = 50, mu_R = 0, mu_F = 0, 
+                            type = c(0,0.1), diffs_nonunif = 0.8)
 
 
-###################################################################################
-# Time measuring function: Runs each DIF detection method separately to measure runtime
-run_all_statistics <- function() {
-  # Define the names of the DIF methods to test
-  stat_names <- c("SIBB", "MantelB", "MantelNUB", "BresB", "LogB", "cSIBB")
-  
-  # Initialize a numeric vector to store time results
-  results <- numeric(length(stat_names))
-  
-  # Loop through each statistical method
-  for (i in seq_along(stat_names)) {
-    # Create a list of all methods set to FALSE
-    stats_list <- setNames(as.list(rep(FALSE, length(stat_names))), stat_names)
-    
-    # Activate only the current method
-    stats_list[[stat_names[i]]] <- TRUE
-    
-    # Run the simulation with the selected method and record time
-    result <- simul_total2(
-      N = 1000,             # Number of replications
-      n_total = 500,        # Total sample size
-      rat_n = c(1, 2),      # Group size ratio (focal:reference)
-      I = 40,               # Number of items
-      mu_R = 0,             # Reference group ability mean
-      mu_F = -1,            # Focal group ability mean
-      type = "alpha",       # Type I error condition (no DIF)
-      statistics = stats_list, # Use only the current method
-      timeMeasure = TRUE    # Return time taken
-    )
-    
-    # Store the result (time taken)
-    results[i] <- result
-  }
-  
-  # Combine method names and times into a data frame
-  df_results <- data.frame(
-    Method = stat_names,
-    Value = results
+run_all_simulations <- function() {
+  res_alpha2 <- simul_total3(
+    N = 1000, n_total = 500, rat_n = c(1, 2), I = 50,
+    mu_R = 0, mu_F = 0, type = c(0, 0), diffs_unif = 0
   )
   
-  return(df_results)
-}
-#Evaluation ---------------------------------------------------------------------
-
-df_results <- run_all_statistics()
-write.csv(df_results, "time_testing.csv")
-
-#################################################################################
-#################################################################################
-#Estimate of Type I error
-
-calculate_alpha_estimates <- function(res_alpha) {
-  # Calculate est_alpha (proportion of p-values <= 0.01 for rows 1:3)
-  est_alpha <- apply(res_alpha$alpha$pvalues[1:3,], 1, function(x) {
-    sum(x <= 0.01, na.rm = TRUE) / sum(!is.na(x))
-  })
-  
-  # Calculate est_alpha2 (proportion of p-values <= 0.05 for rows 4:9)
-  est_alpha2 <- apply(res_alpha$alpha$pvalues[4:9,], 1, function(x) {
-    sum(x <= 0.05, na.rm = TRUE) / sum(!is.na(x))
-  })
-  
-  # Combine both into a single vector (est_alpha_total)
-  est_alpha_total <- c(est_alpha, est_alpha2)
-  
-  # Calculate the number of NAs in each row
-  alphaNA <- apply(res_alpha$alpha$pvalues, 1, function(x) { sum(is.na(x)) })
-  
-  # Calculate confidence intervals for each estimate
-  confintAlpha <- rep(NA, length(est_alpha_total))
-  for (i in 1:length(est_alpha_total)) {
-    confintAlpha[i] <- paste(
-      "(", 
-      round(binom.test(round((1000 - alphaNA[i]) * est_alpha_total[i]), n = (1000 - alphaNA[i]))$conf.int[1], 3), ", ",
-      round(binom.test(round((1000 - alphaNA[i]) * est_alpha_total[i]), n = (1000 - alphaNA[i]))$conf.int[2], 3), 
-      ")", sep = ""
-    )
-  }
-  # Return the results as a list
-  return(list(est_alpha_total = est_alpha_total,
-              alphaNA = alphaNA, 
-              confintAlpha = confintAlpha))
-}
-View(res_alpha$alpha$pvalues)
-
-est_alpha_result<- calculate_alpha_estimates(res_alpha)
-est_alpha_frame <- data.frame(
-  est_alpha_total = est_alpha_result$est_alpha_total, 
-  alphaNA = est_alpha_result$alphaNA, 
-  confintAlpha = est_alpha_result$confintAlpha
-)
-
-# Set the row names to match the names in alphaNA
-rownames(est_alpha_frame) <- names(est_alpha_result$alphaNA)
-print(est_alpha_frame)
-
-################################################################################
-#Estimation of power of the test
-
-calculate_power_and_NA <- function(data, diffs = c(0.4, 0.6, 0.8, 1), type = c("nonunif", "unif")) {
-  
-  # Ensure 'type' is either 'nonunif' or 'unif'
-  if (!type %in% c("nonunif", "unif")) {
-    stop("Invalid type. Please specify either 'nonunif' or 'unif'.")
-  }
-  
-  # Get the prefix based on 'type' argument
-  prefix <- ifelse(type == "nonunif", "NonUnif_DIF_delta", "Unif_DIF_delta")
-  
-  # Get the number of rows from the first pvalues matrix (assuming all have the same structure)
-  num_rows <- nrow(data[[paste0(prefix, diffs[1])]]$pvalues)
-  
-  # Initialize the result matrices for both sets of rows
-  est_power <- matrix(NA, nrow = num_rows, ncol = length(diffs)) # Dynamic number of rows
-  NAValues <- matrix(NA, nrow = num_rows, ncol = length(diffs)) # Dynamic number of rows
-  
-  # Row labels (methods names)
-  method_labels <- rownames(data[[paste0(prefix, diffs[1])]]$pvalues)
-  
-  # Loop through each delta in diffs
-  for (i in 1:length(diffs)) {
-    delta <- diffs[i]
-    
-    # Access the pvalues for the current delta
-    pvalues <- data[[paste0(prefix, delta)]]$pvalues
-    
-    # Calculate est_power (proportion of p-values <= 0.01 for rows 1:3, <= 0.05 for rows 4:9)
-    est_power[1:3, i] <- apply(pvalues[1:3, ], 1, function(x) { mean(x <= 0.01, na.rm = TRUE) })
-    est_power[4:9, i] <- apply(pvalues[4:9, ], 1, function(x) { mean(x <= 0.05, na.rm = TRUE) })
-    
-    # Calculate NA400 (count of NA values)
-    NAValues[1:3, i] <- apply(pvalues[1:3, ], 1, function(x) { sum(is.na(x)) })
-    NAValues[4:9, i] <- apply(pvalues[4:9, ], 1, function(x) { sum(is.na(x)) })
-  }
-  
-  # Add row labels
-  rownames(est_power) <- method_labels
-  rownames(NAValues) <- method_labels
-  
-  # Add column labels (diffs values)
-  colnames(est_power) <- paste0("Delta_", diffs)
-  colnames(NAValues) <- paste0("Delta_", diffs)
-  
-  # Return the two matrices
-  return(list(est_power = est_power, NAValues = NAValues))
-}
-
-
-diffsNU <- c(0.4, 0.6, 0.8, 1)  # Example diffs
-diffsU <- c(0.5,1,2,4)
-est_power_nonufif <- calculate_power_and_NA(res_nonunif, diffsNU, type = "nonunif")
-est_power_unif <- calculate_power_and_NA(res_unif, diffsU, type = "unif")
-
-################################################################################
-################################################################################
-#Parameter testing
-
-
-# Define the I values
-I_values <- c(5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80)
-n_total_value <- c(100,200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1400)
-# Prepare lists to store the results
-table1_list <- list()
-table2_list <- list()
-
-# Loop through I values
-for (I_value in I_values) {
-  print(n_val)
-  res_alpha2 <- simul_total2(
-    N = 1000,
-    n_total = 500,
-    rat_n = c(1, 2),
-    I = I_value,
-    mu_R = 0,
-    mu_F = -1,
-    type = "alpha",
-    statistics = list(
-      SIBB = TRUE,
-      MantelB = TRUE,
-      MantelNUB = TRUE,
-      BresB = TRUE,
-      LogB = TRUE,
-      cSIBB = TRUE
-    )
+  res_bothdif <- simul_total3(
+    N = 1000, n_total = 500, rat_n = c(1, 2), I = 50,
+    mu_R = 0, mu_F = 0, type = c(0.1, 0.1), diffs_unif = 0.6, diffs_nonunif = 0.8
   )
-est_alpha_result2 <- calculate_alpha_estimates(res_alpha2)
   
-  # Add current I to the tables
-table1 <- est_alpha_result2$est_alpha_total
-table2 <- est_alpha_result2$alphaNA
+  res_udif <- simul_total3(
+    N = 1000, n_total = 500, rat_n = c(1, 2), I = 50,
+    mu_R = 0, mu_F = 0, type = c(0.1, 0), diffs_unif = 0.6
+  )
   
-table1$I <- I_val
-table2$I <- I_val
+  res_nondif <- simul_total3(
+    N = 1000, n_total = 500, rat_n = c(1, 2), I = 50,
+    mu_R = 0, mu_F = 0, type = c(0, 0.1), diffs_nonunif = 0.8
+  )
   
-  table1_list[[as.character(n_val)]] <- table1
-  table2_list[[as.character(n_val)]] <- table2
+  return(list(
+    alpha2 = res_alpha2,
+    both_dif = res_bothdif,
+    uniform_dif = res_udif,
+    nonuniform_dif = res_nondif
+  ))
 }
 
-# Combine all into final tables
-final_table1 <- do.call(rbind, table1_list)
-final_table2 <- do.call(rbind, table2_list)
+results <- run_all_simulations()
 
-# View results
-print(final_table1) # I values variable, n = 500 (I think)
-print(final_table2)
 
-#Total time for simulation: 1.04047406858868
 
-print(final_table12) # n values variable, I = 30
-print(final_table22)
-#Total time for simulations 45.715
 
+######################################################################################
+#----------------------------------------------------------------
+#Debugging
+group_size_test <- generate_group_sizes(500, c(1,2))
+params_item <- generate_param(50)
+n1<- group_size_test$n1
+n2<- group_size_test$n2
+theta1_ab <- rnorm(n1, mean = 0, sd = 1)
+theta2_ab <- rnorm(n2, mean = 0, sd = 1)
+param1_ab <- generate_param(50)
+param2_ab <- param1_ab
+data1 <- rmvlogis(n1, param1_ab, IRT = TRUE, link = "logit", z.vals = matrix(theta1_ab)) # reference
+data2 <- rmvlogis(n2, param2_ab, IRT = TRUE, link = "logit", z.vals = matrix(theta2_ab)) # focal
+data <- rbind(data1, data2)
+skup <- c(rep(0, n1), rep(1, n2))
+difSIBTEST(data, skup, focal.name = 1, type = 'udif', purify = FALSE)[[1]]
+difSIBTEST(data, skup, focal.name = 1, type = 'udif', purify = FALSE)$p.value
+length(ress$X2)
+ress <- try(difSIBTEST(data, skup, focal.name = 1, type = 'udif', purify = FALSE), silent = TRUE)
+
+ress2 <- try(difBD(data, skup, focal.name = 1), silent = TRUE)[[1]]
+ress2[[1]][,1]
+ress2$BDstat
+ress3 <- try(difLogistic(data, skup, focal.name = 1), silent  =TRUE)
+ress3[[1]]
+ress4 <- try(difSIBTEST(data, skup, focal.name = 1, type = 'udif', purify = FALSE), silent = TRUE)[[1]]
+#---------------------------------------------------------------------------------------------------------
+###################################################################################################
+calculate_power_rate <- function(input) {
+  methods <- c()
+  if (input$metadata$statistics$MantelB) methods <- c(methods, "Mantel")
+  if (input$metadata$statistics$MantelNUB) methods <- c(methods, "MantelNormal", "MantelLow", "MantelHigh")
+  if (input$metadata$statistics$BresB) methods <- c(methods, "Bres", "Bres2")
+  if (input$metadata$statistics$LogB) methods <- c(methods, "Log")
+  if (input$metadata$statistics$SIBB) methods <- c(methods, "SIB")
+  if (input$metadata$statistics$cSIBB) methods <- c(methods, "cSIB")
+  
+  dif_items <- sort(unique(c(input$metadata$unif_items, input$metadata$nonunif_items)))
+  
+  power_results <- list()
+  
+  for (method in methods) {
+    print(method)
+    print(dif_items)
+    mat <- input$results[[method]]
+    mat <- mat[dif_items,]
+    alpha <- if (method %in% c("MantelNormal", "MantelLow", "MantelHigh")) 0.01 else 0.05
+    
+    detected <- mat <= alpha
+    num_detected <- sum(detected, na.rm = TRUE)
+    denom <- length(dif_items) * input$metadata$N
+    print(detected)
+    print(denom)
+    power_results[[method]] <- num_detected / denom
+  }
+  
+  return(power_results)
+}
+
+
+calculate_rejection_rate <- function(input) {
+  methods <- c()
+  if (input$metadata$statistics$MantelB) methods <- c(methods, "Mantel")
+  if (input$metadata$statistics$MantelNUB) methods <- c(methods, "MantelNormal", "MantelLow", "MantelHigh")
+  if (input$metadata$statistics$BresB) methods <- c(methods, "Bres", "Bres2")
+  if (input$metadata$statistics$LogB) methods <- c(methods, "Log")
+  if (input$metadata$statistics$SIBB) methods <- c(methods, "SIB")
+  if (input$metadata$statistics$cSIBB) methods <- c(methods, "cSIB")
+  
+  #dif_items <- sort(unique(c(input$metadata$unif_items, input$metadata$nonunif_items)))
+  #all_items <- seq_len(nrow(input$results[[methods[1]]]))
+  #non_dif_items <- setdiff(all_items, dif_items)
+  
+  
+  rejection_results <- list()
+  
+  for (method in methods) {
+    mat <- input$results[[method]]
+    alpha <- if (method %in% c("MantelNormal", "MantelLow", "MantelHigh")) 0.01 else 0.05
+    
+    detected <- mat <= alpha
+    num_false_detected <- sum(detected, na.rm = TRUE)
+    denom <- input$metadata$I * input$metadata$N
+    
+    rejection_results[[method]] <- num_false_detected / denom
+  }
+  
+  return(rejection_results)
+}
+
+
+calculate_rejection_rate(
+  results$alpha2)
+calculate_power_rate(results$both_dif)
+
+calculate_power_rate(results$nonuniform_dif)
+
+calculate_power_rate(results$uniform_dif)
+#Testing --------------------------------------------------------------------
+methods <- c()
+if (input$metadata$statistics$MantelB) methods <- c(methods, "Mantel")
+if (input$metadata$statistics$MantelNUB) methods <- c(methods, "MantelNormal", "MantelLow", "MantelHigh")
+if (input$metadata$statistics$BresB) methods <- c(methods, "Bres", "Bres2")
+if (input$metadata$statistics$LogB) methods <- c(methods, "Log")
+if (input$metadata$statistics$SIBB) methods <- c(methods, "SIB")
+if (input$metadata$statistics$cSIBB) methods <- c(methods, "cSIB")
+
+dif_items <- sort(unique(c(input$metadata$unif_items, input$metadata$nonunif_items)))
+
+power_results <- list()
+
+for (method in methods) {
+  mat <- input$results$method[dif_items,]
+  alpha <- if (method %in% c("MantelNormal", "MantelLow", "MantelHigh")) 0.01 else 0.05
+  
+  detected <- mat <= alpha
+  num_detected <- sum(detected, na.rm = TRUE)
+  denom <- length(dif_items) * input$metadata$N
+  print(detected)
+  print(denom)
+  power_results <- num_detected / denom
+}
 
 #################################################################################
-#I gloriously forgot to save the latest changes, so this is not the uploading of csv looked slighlty different
-library(openxlsx)
-
-wb <- createWorkbook()
-addWorksheet(wb, "P-Values")
-addWorksheet(wb, "Statistics")
-
-writeData(wb, "P-Values", res_alpha$pvalues)
-writeData(wb, "Statistics", res_alpha$stat)
-
-saveWorkbook(wb, "outputs-csv/res_alpha.xlsx", overwrite = TRUE)
-
-#write.csv(res_alpha$alpha$pvalues, "outputs-csv/res_aplha.csv")
-#write.csv(res_unif, "res_unif.csv")
-#write.csv(res_nonunif, "res_nonunif.csv")
-
-
-write.csv(est_power_unif, "est_unif.csv")
-write.csv(est_power_nonufif, "est_nonunif.csv")
-write.csv(final_table1, "parameter-I.csv")
-write.csv(final_table1, "parameter-n.csv")
-write.csv(est_alpha_frame, "est_alpha.csv")
-save.image(file = "simulation-abe.RData")
 
 
 
-############################################################################
-#Plotting
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
 
 library(dplyr)
 library(ggplot2)
@@ -549,3 +540,4 @@ ggplot(final_table1_long, aes(x = I, y = Type_I_Error, color = Method, group = M
   theme_minimal(base_size = 14) +
   scale_color_brewer(palette = "Set3") +  # Use a color palette that supports many categories
   theme(legend.position = "bottom")  # Position the legend at the bottom
+

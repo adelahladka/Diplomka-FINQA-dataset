@@ -267,9 +267,8 @@ run_all_statistics <- function() {
   return(df_results)
 }
 #Evaluation ---------------------------------------------------------------------
-
 df_results <- run_all_statistics()
-write.csv(df_results, "time_testing.csv")
+
 
 #################################################################################
 #################################################################################
@@ -319,7 +318,8 @@ est_alpha_frame <- data.frame(
 # Set the row names to match the names in alphaNA
 rownames(est_alpha_frame) <- names(est_alpha_result$alphaNA)
 print(est_alpha_frame)
-write.csv(est_alpha_frame, "est_alpha.csv")
+
+
 ################################################################################
 #Estimation of power of the test
 
@@ -438,29 +438,94 @@ print(final_table22)
 
 
 #################################################################################
-#I gloriously forgot to save the latest changes, so this is not the uploading of csv looked slighlty different
-library(openxlsx)
-
-wb <- createWorkbook()
-addWorksheet(wb, "P-Values")
-addWorksheet(wb, "Statistics")
-
-writeData(wb, "P-Values", res_alpha$pvalues)
-writeData(wb, "Statistics", res_alpha$stat)
-
-saveWorkbook(wb, "outputs-csv/res_alpha.xlsx", overwrite = TRUE)
-
-#write.csv(res_alpha$alpha$pvalues, "outputs-csv/res_aplha.csv")
-#write.csv(res_unif, "res_unif.csv")
-#write.csv(res_nonunif, "res_nonunif.csv")
-
-
-write.csv(est_power_unif, "est_unif.csv")
-write.csv(est_power_nonufif, "est_nonunif.csv")
-write.csv(final_table1, "parameter-I.csv")
-write.csv(final_table1, "parameter-n.csv")
-
 save.image(file = "simulation-abe.RData")
 
-?difLogistic
-?rmvlogis
+
+
+############################################################################
+#Plotting
+
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+#Type I error
+
+est_alpha_frame2 <- est_alpha_frame %>%
+  tibble::rownames_to_column("Method") %>%
+  separate(confintAlpha, into = c("Lower", "Upper"), sep = ", ", remove = FALSE) %>%
+  mutate(
+    Lower = as.numeric(gsub("[()]", "", Lower)),
+    Upper = as.numeric(gsub("[()]", "", Upper))
+  )
+
+ggplot(est_alpha_frame2, aes(x = Method, y = est_alpha_total)) +
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.6) +
+  geom_errorbar(aes(ymin = Lower, ymax = Upper), width = 0.2, color = "black") +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "red", size = 0.8) +
+  labs(title = "Estimated Type I Error with 95% Confidence Intervals",
+       x = "Method",
+       y = "Estimated Type I Error Rate") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+#################################################################################
+est_powerUnif <- as.data.frame(est_power_unif$est_power)
+
+est_power_long_unif <- est_powerUnif %>%
+  tibble::rownames_to_column("Method") %>%      # move rownames to a column
+  pivot_longer(cols = starts_with("Delta"),     # reshape to long format
+               names_to = "Delta", 
+               values_to = "Power")
+
+
+ggplot(est_power_long_unif, aes(x = Delta, y = Power, color = Method, group = Method)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(title = "Power by Method Across Different Effect Sizes",
+       x = "Effect Size", y = "Estimated Power") +
+  theme_minimal(base_size = 14) +
+  scale_color_brewer(palette = "Set2") +
+  geom_hline(yintercept = 0.8, linetype = "dashed", color = "grey30")
+
+
+
+est_powerNONUnif <- as.data.frame(est_power_nonufif$est_power)
+
+
+
+est_power_long_nonunif <- est_powerNONUnif %>%
+  tibble::rownames_to_column("Method") %>%  # Add method as a column
+  pivot_longer(cols = starts_with("Delta"), 
+               names_to = "Delta", 
+               values_to = "Power") %>%
+  filter(!is.na(Power))  # Remove missing values
+
+# Plot the data
+ggplot(est_power_long_nonunif, aes(x = Delta, y = Power, color = Method, group = Method)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(title = "Power by Method Across Different Effect Sizes",
+       x = "Effect Size (Delta)", y = "Estimated Power") +
+  theme_minimal(base_size = 14) +
+  scale_color_brewer(palette = "Set3") +  # Use a palette that supports more than 8 colors
+  geom_hline(yintercept = 0.8, linetype = "dashed", color = "grey30")  # Optional: Add a threshold line for power = 0.8
+
+
+##############################################################
+final_table1$I <- as.numeric(final_table1$I)
+final_table1F <- as.data.frame(final_table1)
+# Reshape the data from wide format to long format
+final_table1_long <- final_table1F %>%
+  pivot_longer(cols = -I, names_to = "Method", values_to = "Type_I_Error")  # Reshape the data
+
+# Plot the data
+ggplot(final_table1_long, aes(x = I, y = Type_I_Error, color = Method, group = Method)) +
+  geom_line(size = 1) +  # Line for each method
+  geom_point(size = 2) +  # Points for each method
+  labs(title = "Type I Error by Number of Items (I)",
+       x = "Number of Items (I)", y = "Type I Error") +
+  theme_minimal(base_size = 14) +
+  scale_color_brewer(palette = "Set3") +  # Use a color palette that supports many categories
+  theme(legend.position = "bottom")  # Position the legend at the bottom
+
