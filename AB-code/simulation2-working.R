@@ -5,7 +5,7 @@ library(difR)
 
 set.seed(123)
 
-#load("simulation-abe.RData")
+#load("simulation2-abe.RData")
 
 ###################################################################################
 #Hyperparameters
@@ -221,7 +221,7 @@ simul_total3 <- function(N, n_total, rat_n, I, mu_R, mu_F,
   
   # Apply Non-Uniform DIF (adjust discrimination a → param[,2])
   if (n_nonunif > 0) {
-    diffs_n <- rep(diffs_nonunif, length.out = n_nonunif)
+    diffs_n <- rep(diffs_nonunif, length.out = n_nonunif)#TODO: can be added as string, or randomly in some range
     for (j in seq_along(nonunif_items)) {
       idx <- nonunif_items[j]
       a_orig <- param1_ab[idx, 2]  # original discrimination
@@ -273,6 +273,10 @@ res_alpha2 <- simul_total3(N = 1000, n_total = 500, rat_n = c(1,2), I = 50, mu_R
 res_bothdif <- simul_total3(N = 1000, n_total = 500, rat_n = c(1,2), I = 50, mu_R = 0, mu_F = 0, 
                            type = c(0.1,0.1), diffs_unif = 0.6, diffs_nonunif = 0.8)
 
+res_bothdif2 <- simul_total3(N = 5000, n_total = 500, rat_n = c(1,2), I = 50, mu_R = 0, mu_F = 0, 
+                            type = c(0.1,0.1), diffs_unif = 0.6, diffs_nonunif = 0.8)
+
+
 res_udif <- simul_total3(N = 1000, n_total = 500, rat_n = c(1,2), I = 50, mu_R = 0, mu_F = 0, 
                             type = c(0.1,0), diffs_unif = 0.6)
 
@@ -281,21 +285,22 @@ res_nondif <- simul_total3(N = 1000, n_total = 500, rat_n = c(1,2), I = 50, mu_R
 
 
 run_all_simulations <- function() {
+  print('fun1')
   res_alpha2 <- simul_total3(
     N = 1000, n_total = 500, rat_n = c(1, 2), I = 50,
     mu_R = 0, mu_F = 0, type = c(0, 0), diffs_unif = 0
   )
-  
+  print('fun2')
   res_bothdif <- simul_total3(
     N = 1000, n_total = 500, rat_n = c(1, 2), I = 50,
     mu_R = 0, mu_F = 0, type = c(0.1, 0.1), diffs_unif = 0.6, diffs_nonunif = 0.8
   )
-  
+  print('fun3')
   res_udif <- simul_total3(
     N = 1000, n_total = 500, rat_n = c(1, 2), I = 50,
     mu_R = 0, mu_F = 0, type = c(0.1, 0), diffs_unif = 0.6
   )
-  
+  print('fun4')
   res_nondif <- simul_total3(
     N = 1000, n_total = 500, rat_n = c(1, 2), I = 50,
     mu_R = 0, mu_F = 0, type = c(0, 0.1), diffs_nonunif = 0.8
@@ -331,6 +336,8 @@ data <- rbind(data1, data2)
 skup <- c(rep(0, n1), rep(1, n2))
 difSIBTEST(data, skup, focal.name = 1, type = 'udif', purify = FALSE)[[1]]
 difSIBTEST(data, skup, focal.name = 1, type = 'udif', purify = FALSE)$p.value
+
+?difSIBTEST
 length(ress$X2)
 ress <- try(difSIBTEST(data, skup, focal.name = 1, type = 'udif', purify = FALSE), silent = TRUE)
 
@@ -356,8 +363,8 @@ calculate_power_rate <- function(input) {
   power_results <- list()
   
   for (method in methods) {
-    print(method)
-    print(dif_items)
+    #print(method)
+    #print(dif_items)
     mat <- input$results[[method]]
     mat <- mat[dif_items,]
     alpha <- if (method %in% c("MantelNormal", "MantelLow", "MantelHigh")) 0.01 else 0.05
@@ -365,8 +372,8 @@ calculate_power_rate <- function(input) {
     detected <- mat <= alpha
     num_detected <- sum(detected, na.rm = TRUE)
     denom <- length(dif_items) * input$metadata$N
-    print(detected)
-    print(denom)
+    #print(detected)
+    #print(denom)
     power_results[[method]] <- num_detected / denom
   }
   
@@ -404,7 +411,10 @@ calculate_rejection_rate <- function(input) {
   return(rejection_results)
 }
 
-
+results$alpha2$metadata
+results$both_dif$metadata
+results$uniform_dif$metadata
+results$nonuniform_dif$metadata
 calculate_rejection_rate(
   results$alpha2)
 calculate_power_rate(results$both_dif)
@@ -412,6 +422,9 @@ calculate_power_rate(results$both_dif)
 calculate_power_rate(results$nonuniform_dif)
 
 calculate_power_rate(results$uniform_dif)
+
+calculate_power_rate(res_bothdif2)
+
 #Testing --------------------------------------------------------------------
 methods <- c()
 if (input$metadata$statistics$MantelB) methods <- c(methods, "Mantel")
@@ -541,3 +554,23 @@ ggplot(final_table1_long, aes(x = I, y = Type_I_Error, color = Method, group = M
   scale_color_brewer(palette = "Set3") +  # Use a color palette that supports many categories
   theme(legend.position = "bottom")  # Position the legend at the bottom
 
+
+
+######################################################################
+# Define the I values
+I_values <- c(5, 10, 15)#, 20, 25, 30, 40, 50, 60, 70, 80)
+n_total_value <- c(100,200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1400)
+# Prepare lists to store the results
+
+# Loop through I values
+for (n_val in n_total_value) {
+  print(n_val)
+  res_alpha2 <- simul_total3(
+    N = 10, n_total = n_val, rat_n = c(1, 2), I = 50,
+    mu_R = 0, mu_F = 0, type = c(0, 0), diffs_unif = 0
+  )
+  est_alpha_result2 <- calculate_rejection_rate(res_alpha2)
+}#not working, to do
+
+
+save.image(file = "simulation2-abe.RData")
