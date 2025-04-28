@@ -221,7 +221,7 @@ simulation_abe3 <- function(N, n1, n2, skup, param1, param2, theta1, theta2,
 # ============================
 simul_total3 <- function(N, n_total, rat_n, I, mu_R, mu_F,
                          type = c(0, 0), # proportions of unif and nonunif DIF
-                         diffs_unif = 0.5, diffs_nonunif = 1, seed_arg = 2025,
+                         diffs_unif = 0.5, diffs_nonunif = 1, seed_arg = 2025, diff_random = TRUE,
                          statistics = list(MantelB = TRUE, MantelNUB = TRUE, BresB = TRUE, LogB = TRUE, SIBB = TRUE, cSIBB = TRUE)) {
   start_time <- Sys.time()
   #-------------------
@@ -245,7 +245,14 @@ simul_total3 <- function(N, n_total, rat_n, I, mu_R, mu_F,
   n_nonunif <- if (type[2] > 0) round(type[2] * I) else 0
 
   # Select DIF items
-  dif_items <- if ((n_unif + n_nonunif) > 0) sample(1:I, n_unif + n_nonunif, replace = FALSE) else integer(0)
+  dif_items <- if ((n_unif + n_nonunif) > 0) {
+    if (diff_random) {
+      sample(1:I, n_unif + n_nonunif, replace = FALSE)
+    } else {
+      1:(n_unif + n_nonunif)
+    }
+  } else integer(0)
+  
   unif_items <- if (n_unif > 0) dif_items[1:n_unif] else integer(0)
   nonunif_items <- if (n_nonunif > 0) dif_items[(n_unif + 1):(n_unif + n_nonunif)] else integer(0)
 
@@ -366,8 +373,6 @@ calculate_rejection_rate <- function(input) {
 
   return(rejection_results)
 }
-
-
 calculate_itemwise_detection <- function(input, cutoffs = c(0.5, 0.8, 0.95), include_all_items = FALSE) {
   methods <- c()
   if (input$metadata$statistics$MantelB) methods <- c(methods, "Mantel")
@@ -397,9 +402,13 @@ calculate_itemwise_detection <- function(input, cutoffs = c(0.5, 0.8, 0.95), inc
       pvals <- pvals[!is.na(pvals)]
       prop <- if (length(pvals) > 0) mean(pvals <= (if (method %in% c("MantelNormal", "MantelLow", "MantelHigh")) 0.01 else 0.05)) else NA
       
+      # Here: decide type
+      item_type <- if (item %in% input$metadata$unif_items) "uniform" else "nonuniform"
+      
       row_data <- data.frame(
         item = item,
         method = method,
+        type = item_type,   # <--- add here
         vote_ratio = prop
       )
       
@@ -414,6 +423,7 @@ calculate_itemwise_detection <- function(input, cutoffs = c(0.5, 0.8, 0.95), inc
   
   return(results)
 }
+
 
 
 
