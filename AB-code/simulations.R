@@ -11,42 +11,80 @@ tab <- c()
 res_total <- list() 
 #Useful for making some pretty graphs
 samples_n <- c(10,20,30, 40, 50, 60, 70, 80, 100, 200, 400, 500, 1000,1200,2000)
-samples_I <- c(40, 50, 60, 70, 80, 100, 200)
+samples_I <- c(20, 40, 50, 60, 70, 80, 100, 200)
+difSize <- c(0.4, 0.6, 0.8, 1.0, 1.2, 1.5)
 
 
-#From article S&N 1990 
-n_tot <- c(700, 1000, 1200, 1500) #should be trigerred together
-ratios <- c(c(5,2),c(1,1),c(10,2),c(2,1))
-
-for (sample.size in samples_n) {
+for (dif.size in difSize) {
   # základní nastavení, pro různé sample sizes zkoušíme jednoduchý setting
   # poměr reference:focal 1:1, 20 položek, N(0, 1) rozdělení traitu,
   # uniformní DIF o velikosti 1, 5% DIFových položek (tj. 1)
+  
   res <- simul_total3(
-    N = 1000,
-    n_total =sample.size, rat_n = c(1, 1), I = 40,
+    N =1000,
+    n_total =1000, rat_n = c(1, 1), I = 40,
     mu_R = 0, mu_F = 0,
-    type = c(0,0.025), diffs_unif = 1, seed_arg = 2025,
-   statistics =  list(MantelB = TRUE, MantelNUB = FALSE, BresB = FALSE, LogB = TRUE, SIBB = TRUE, cSIBB = FALSE))
+    type = c(0, 0.025), diffs_nonunif = dif.size, seed_arg = 2025, diff_random = FALSE,
+   statistics =  list(MantelB = TRUE, MantelNUB = TRUE, BresB = FALSE, LogB = TRUE, SIBB = FALSE, cSIBB = TRUE))
   tab <- rbind(
     tab,
     cbind(
       N = 1000,
-      n = sample.size,
-      I =40 ,
-      DIF_type = "uniform",
+      n = 1000,
+      I = 40 ,
+      DIF_type = "nonuniform",
+      DIF_proportion = 0.025,
+      DIF_size = dif.size,
+      power = unlist(calculate_power_rate(res)),
+      rejection = calculate_rejection_rate(res)
+    )
+  )
+  res_total[[as.character(dif.size)]] <- res
+  message(sprintf("Completed iteration %.2f at %s", dif.size, date()))
+}
+tab
+calculate_itemwise_detection2(res_total$`10`, include_all_items = TRUE)
+###############################################################################
+ratios_R <- cbind(c(1,1), c(2,1), c(3,1), c(4,1), c(1,2), c(1,3), c(1,4))
+for (i in 1:ncol(ratios_R)) {
+  ratio.size <- ratios_R[, i]  # this gives you c(a, b)
+  
+  #print(ratio.size)
+  
+  res <- simul_total3(
+    N = 1000,
+    n_total = 1000,
+    rat_n = ratio.size,
+    I = 40,
+    mu_R = 0,
+    mu_F = 0,
+    type = c(0, 0.025),
+    diffs_nonunif = 1,
+    seed_arg = 2025,
+    diff_random = FALSE,
+    statistics = list(MantelB = TRUE, MantelNUB = TRUE, BresB = FALSE, LogB = TRUE, SIBB = FALSE, cSIBB = TRUE)
+  )
+  
+  tab <- rbind(
+    tab,
+    cbind(
+      N = 1000,
+      n = 1000,
+      rat = paste0(ratio.size[1], ":", ratio.size[2]),
+      I = 40,
+      DIF_type = "nonuniform",
       DIF_proportion = 0.025,
       DIF_size = 1,
       power = unlist(calculate_power_rate(res)),
       rejection = calculate_rejection_rate(res)
     )
   )
-  res_total[[as.character(sample.size)]] <- res
+  
+  res_total[[paste0(ratio.size[1], ":", ratio.size[2])]] <- res
+  message(sprintf("Completed iteration %s at %s", paste(ratio.size, collapse = ":"), date()))
 }
-res_total$`40`$results$
+res_total$`1:1`$metadata
 tab
-calculate_itemwise_detection2(res_total$`10`, include_all_items = TRUE)
-###############################################################################
 ###############################################################################
 #Ratio testing as per Penfiled THIS
 
@@ -97,6 +135,86 @@ for (i in seq_along(n_tot)) {
   
   res_total2[[paste0("N", sample.size, "_R", ratio[1], "_F", ratio[2])]] <- res
 }
+###############################################################################
+#One DIF item always
+samples_I <- c(20, 40, 50, 60, 70, 80, 100, 200)
+
+# One DIF item in each case: 1/I proportion of DIF items
+ratios <- list(
+  c(1/20, 0),
+  c(1/40, 0),
+  c(1/50, 0),
+  c(1/60, 0),
+  c(1/70, 0),
+  c(1/80, 0),
+  c(1/100, 0),
+  c(1/200, 0)
+)
+
+ratios2 <- list(
+  c(1/20, 1/20),
+  c(1/40, 1/40),
+  c(1/50, 1/50),
+  c(1/60, 1/60),
+  c(1/70, 1/70),
+  c(1/80, 1/80),
+  c(1/100, 1/100),
+  c(1/200, 1/200)
+)
+
+
+tab2 <- data.frame()
+res_total2 <- list()
+
+for (i in seq_along(samples_I)) {
+  item.size <- samples_I[i]
+  type.size <- ratios2[[i]]
+  
+  res <- simul_total3(
+    N = 1000,
+    n_total = 1000,
+    rat_n = c(1, 1),
+    I = item.size,
+    mu_R = 0, mu_F = 0,
+    type = type.size,
+    diffs_nonunif = 1,
+    seed_arg = 2025,
+    statistics = list(
+      MantelB = TRUE,
+      MantelNUB = TRUE,
+      BresB = FALSE,
+      LogB = TRUE,
+      SIBB = FALSE,
+      cSIBB = TRUE
+    )
+  )
+  
+  tab2 <- rbind(
+    tab2,
+    cbind(
+      N_total = 1000,
+      ratio_ = "1:1",
+      I = item.size,
+      DIF_type = "nonuniform",
+      DIF_proportion = 1 / item.size,
+      DIF_size = 1,
+      power = unlist(calculate_power_rate(res)),
+      rejection = calculate_rejection_rate(res)
+    )
+  )
+  
+  res_total2[[paste0("I", item.size)]] <- res
+  message(sprintf("Completed iteration for I = %d at %s", item.size, date()))
+}
+tab2
+
+20*0.05
+
+
+
+
+
+
 
 
 ####
@@ -126,6 +244,11 @@ points(item7_index, res_total2$N700_R5_F2$metadata$paramR['Item7','a'], col = "r
 
 res_total2$N700_R5_F2$metadata$paramF['Item7','b']
 ##############################################################################
+
+
+
+
+
 ##############################################################################
 ##Time measuring per method
 n_tot <- c(700, 1000, 1200, 1500) #should be trigerred together
@@ -206,15 +329,16 @@ tab
 tab2
 res_total2$N700_R5_F2$metadata
 # save results
-save(tab2, file = "results/penfieldRatioNU-tab.RData")
+save(tab2, file = "results/variable-I-rat-NONU.RData")
 
-save(res_total2, file = "results/penfieldRatio-resU.RData")
-save(res_total2, file = "results/penfieldRatio-resNU.RData")
+save(res_total2, file = "results/variable-I-rat-res-NONU.RData")
+#save(res_total2, file = "results/penfieldRatio-resNU.RData")
 
 load("results/penfieldRatio-res.RData")
 
-save(res_total, file = "results/variable-n-res-U.RData")
-save(tab, file = "results/variable-n-U.RData")
+save(res_total, file = "results/variable-difSize-res-NONU.RData")
+save(tab, file = "results/variable-difSize-NONU.RData")
 #I should do for non uniform
+tab
 
-
+res_total

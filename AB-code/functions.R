@@ -83,6 +83,7 @@ simulation_abe3 <- function(N, n1, n2, skup, param1, param2, theta1, theta2,
     results$cSIB <- new_matrix()
     results$cSIBStat <- new_matrix()
   }
+  pb <- txtProgressBar(min = 0, max = N, style = 3)
 
   for (i in 1:N) {
     data1 <- rmvlogis(n1, param1, IRT = TRUE, link = "logit", z.vals = matrix(theta1))
@@ -200,9 +201,11 @@ simulation_abe3 <- function(N, n1, n2, skup, param1, param2, theta1, theta2,
         results$cSIB[, i] <- stat$p.value
       }
     }
+    setTxtProgressBar(pb, i)
 
-    message(sprintf("Completed iteration %d at %s", i, date()))
+    #message(sprintf("Completed iteration %d at %s", i, date()))
   }
+  close(pb)
 
   results_df <- lapply(results, function(x) {
     df <- as.data.frame(x)
@@ -227,18 +230,18 @@ simul_total3 <- function(N, n_total, rat_n, I, mu_R, mu_F,
   #-------------------
   # generating data
   #-------------------
-  list_ns <- generate_group_sizes(n_total, rat_n)
+  list_ns <- generate_group_sizes(n_total, rat_n) # divides total size into focal and reference groups' sizes accroding to the ratio given
   n1 <- list_ns$n1
   n2 <- list_ns$n2
   
   set.seed(seed_arg)
-  theta1_ab <- rnorm(n1, mean = mu_R, sd = 1)#is it correct to put the same seed for both theta?
+  theta1_ab <- rnorm(n1, mean = mu_R, sd = 1) # generates latent abilities for focal group from normal distribution
   set.seed(seed_arg+100)
-  theta2_ab <- rnorm(n2, mean = mu_F, sd = 1)
+  theta2_ab <- rnorm(n2, mean = mu_F, sd = 1) # generates latent abilities for focal group from normal distribution
   
-  param1_ab <- generate_param(I, seed_arg)
-  param2_ab <- param1_ab
-  skup <- c(rep(0, n1), rep(1, n2))
+  param1_ab <- generate_param(I, seed_arg) # generates paramaters for items for focal group
+  param2_ab <- param1_ab # generates paramaters for items for focal group
+  skup <- c(rep(0, n1), rep(1, n2)) 
 
   # Determine how many items get DIF
   n_unif <- if (type[1] > 0) round(type[1] * I) else 0
@@ -249,7 +252,7 @@ simul_total3 <- function(N, n_total, rat_n, I, mu_R, mu_F,
     if (diff_random) {
       sample(1:I, n_unif + n_nonunif, replace = FALSE)
     } else {
-      1:(n_unif + n_nonunif)
+      1:(n_unif + n_nonunif) # we arbitrary choose first n_unif + n_nonunif items for better visualization
     }
   } else integer(0)
   
@@ -258,8 +261,8 @@ simul_total3 <- function(N, n_total, rat_n, I, mu_R, mu_F,
 
   # Apply Uniform DIF (adjust difficulty b → param[,1])
   if (n_unif > 0) {
-    diffs_u <- rep(diffs_unif, length.out = n_unif)
-    param2_ab[unif_items, 1] <- param1_ab[unif_items, 1] + diffs_u
+    diffs_u <- rep(diffs_unif, length.out = n_unif) #TODO: add diferent effects 
+    param2_ab[unif_items, 1] <- param1_ab[unif_items, 1] + diffs_u # constant effect for all DIF items
   }
 
   # Apply Non-Uniform DIF (adjust discrimination a → param[,2])
@@ -268,17 +271,17 @@ simul_total3 <- function(N, n_total, rat_n, I, mu_R, mu_F,
     for (j in seq_along(nonunif_items)) {
       idx <- nonunif_items[j]
       a_orig <- param1_ab[idx, 2] # original discrimination
-      c_orig <- param1_ab[idx, 3] # guessing parameter (usually 0 for 2PL)
+      c_orig <- param1_ab[idx, 3] # original guessing parameter
       delta <- diffs_n[j]
 
-      # Adjusted discrimination for focal group (2PL logic: more/less sensitive to ability)
+      # Adjusted discrimination for focal group using the formula
       new_a <- 2 * a_orig / (2 + delta * a_orig / ((1 - c_orig) * log(2)))
 
-      param2_ab[idx, 2] <- new_a
+      param2_ab[idx, 2] <- new_a # new discrimination parameter
     }
   }
   # print(I)
-  res <- simulation_abe3(N, n1, n2, skup, param1_ab, param2_ab, theta1_ab, theta2_ab, statistics, I)
+  res <- simulation_abe3(N, n1, n2, skup, param1_ab, param2_ab, theta1_ab, theta2_ab, statistics, I) 
 
   end_time <- Sys.time()
 
