@@ -4,90 +4,257 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(gridExtra)
+library(scales)  # for colour values
 ################################################################################
 ################################################################################
-#A. Theoretical graphs
+#IRT models showcase
+okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00")
+cb_palette <- c("Reference" = "#56B4E9", "Focal" = "#E69F00")
 
+# Define theta range
+theta <- seq(-4, 4, length.out = 300)
 
-#Introduction-------------------------------------------------------------------
-# ICC function
+# Define logistic function and ICC
 logit <- function(x) 1 / (1 + exp(-x))
-icc <- function(theta, a, b, c) c + (1 - c) * logit(a * (theta - b))
+icc <- function(theta, a, b, c, d) c + (d - c) * logit(a * (theta - b))
 
-# Set constants
-theta <- seq(-4, 4, length.out = 500)
+
+#######################################################
+#4PL model
+# Define 3 sets of item parameters: a, b, c, d
+params <- data.frame(
+  item = factor(c("Item 1", "Item 2", "Item 3")),
+  a = c(0.8, 1.2, 1.5),
+  b = c(-1, 0, 1),
+  c = c(0.1, 0.2, 0.25),
+  d = c(0.9, 0.95, 1)
+)
+
+# Generate ICC data
+icc_data <- params %>%
+  rowwise() %>%
+  do({
+    a <- .$a
+    b <- .$b
+    c <- .$c
+    d <- .$d
+    item <- .$item
+    tibble(
+      theta = theta,
+      P = icc(theta, a, b, c, d),
+      item = item
+    )
+  }) %>%
+  bind_rows()
+
+
+
+# Plot with colorblind-friendly palette
+theoryIRT4PL <- ggplot(icc_data, aes(x = theta, y = P, color = item)) +
+  geom_line(size = 1.2) +
+  scale_color_manual(values = okabe_ito[1:3]) +
+  labs(
+    x = expression(paste("Latent Ability ", theta)),
+    y = "Probability of Correct Response",
+    color = "Item"
+  ) +
+  theme_minimal() +
+  theme(text = element_text(size = 14)) +
+  legend_inside
+
+ggsave(
+  filename = "plots/theoryIRT4PL.png",
+  plot     = theoryIRT4PL,
+  width    = 6, 
+  height   = 4, 
+  dpi      = 300
+)
+
+###############################################################
+###############################################################
+# Common parameters
 a0 <- 1
 b0 <- 0
 c <- 0.2
 
-# ----- UNIFORM DIF (varying d) -----
-d_vals <- c(0.5, 1, 2, 4)
-uniform_data <- lapply(d_vals, function(d) {
+# --------------------
+# UNIFORM DIF (shift in difficulty b)
+# --------------------
+b1 <- b0 + 1.1  # shift difficulty
+uniform_data <- data.frame(
+  theta = rep(theta, 2),
+  prob = c(icc(theta, a0, b0, c,1), icc(theta, a0, b1, c, 1)),
+  group = rep(c("Reference", "Focal"), each = length(theta)),
+  type = "Uniform DIF"
+)
+
+# --------------------
+# NON-UNIFORM DIF (change in discrimination a)
+# --------------------
+delta1 <- 1
+a1 <- 2 * a0/ (2 + delta1 * a0 / ((1 - c) * log(2)))  # change discrimination
+nonuniform_data <- data.frame(
+  theta = rep(theta, 2),
+  prob = c(icc(theta, a0, b0, c, 1), icc(theta, a1, b0, c, 1)),
+  group = rep(c("Reference", "Focal"), each = length(theta)),
+  type = "Non-Uniform DIF"
+)
+
+# --------------------
+# PLOTS
+# --------------------
+# Colorblind-friendly palette
+
+legend_inside <- theme(
+  legend.position = c(0.99,0.01),
+  legend.position.inside = "bottom-right",
+  legend.justification = c("right", "bottom"),
+  legend.background = element_rect(fill = alpha("white", 0.8), color = NA),
+  legend.title = element_text(size = 10),
+  legend.text = element_text(size = 9)  # ← smaller legend labels
+)
+
+
+intro_unif <- ggplot(uniform_data, aes(x = theta, y = prob, color = group)) +
+  geom_line(size = 1.2) +
+  scale_color_manual(values = cb_palette) +
+  labs(
+    x = expression(paste("Latent Ability ", theta)),
+    y = "Probability of Correct Response"
+  ) +
+  theme_minimal(base_size = 14) +
+  legend_inside
+
+intro_nonunif <- ggplot(nonuniform_data, aes(x = theta, y = prob, color = group)) +
+  geom_line(size = 1.2) +
+  scale_color_manual(values = cb_palette) +
+  labs(
+    x = expression(paste("Latent Ability ", theta)),
+    y = "Probability of Correct Response"
+  ) +
+  theme_minimal(base_size = 14) +
+  legend_inside
+
+
+# Show plots
+theoryIntro <- grid.arrange(
+  intro_unif,
+  intro_nonunif,
+  ncol = 2  # two columns side by side
+)
+
+
+ggsave(
+  filename = "plots/theoryIntro.png",
+  plot     = theoryIntro,
+  width    = 6, 
+  height   = 4, 
+  dpi      = 300
+)
+
+############################################################
+a0 <- 1
+b0 <- 0
+c <- 0.2
+
+
+# --- UNIFORM DIF with different difficulty shifts ---
+b_shifts <- c(0.5, 1.0, 1.5)
+uniform_data_multi <- lapply(b_shifts, function(shift) {
   data.frame(
     theta = theta,
-    prob = icc(theta, a0, b0 + d, c),
-    group = paste0("d = ", d)
+    prob = icc(theta, a0, b0 + shift, c, 1),
+    group = paste0("Focal (δ =" ,shift,")"),
+    type = "Focal"
   )
-}) %>% bind_rows() %>%
-  mutate(type = "Focal")
+}) %>% bind_rows()
 
 ref_uniform <- data.frame(
   theta = theta,
-  prob = icc(theta, a0, b0, c),
+  prob = icc(theta, a0, b0, c, 1),
   group = "Reference",
   type = "Reference"
 )
 
-plot_data_uniform <- bind_rows(uniform_data, ref_uniform)
+plot_data_uniform <- bind_rows(ref_uniform, uniform_data_multi)
 
-# ----- NON-UNIFORM DIF (varying Δ) -----
-delta_vals <- c(0.4, 0.6, 0.8, 1.0)
-compute_a1 <- function(a0, c, delta) {
-  numerator <- 2 * a0 * log(2)
-  denominator <- 2 * log(2) + (delta * a0) / (1 - c)
-  numerator / denominator
-}
-
-nonuniform_data <- lapply(delta_vals, function(delta) {
-  a1 <- compute_a1(a0, c, delta)
+# --- NON-UNIFORM DIF with different discrimination changes ---
+deltas <- c(0.4, 0.8, 1.2)
+nonuniform_data_multi <- lapply(deltas, function(delta) {
+  a1 <- 2 * a0 / (2 + delta * a0 / ((1 - c) * log(2)))
   data.frame(
     theta = theta,
-    prob = icc(theta, a1, b0, c),
-    group = paste0("Δ = ", delta)
+    prob = icc(theta, a1, b0, c, 1),
+    group = paste0("Focal (Δ = ", delta, ")"),
+    type = "Focal"
   )
-}) %>% bind_rows() %>%
-  mutate(type = "Focal")
+}) %>% bind_rows()
 
 ref_nonuniform <- data.frame(
   theta = theta,
-  prob = icc(theta, a0, b0, c),
+  prob = icc(theta, a0, b0, c, 1),
   group = "Reference",
   type = "Reference"
 )
 
-plot_data_nonuniform <- bind_rows(nonuniform_data, ref_nonuniform)
+plot_data_nonuniform <- bind_rows(ref_nonuniform, nonuniform_data_multi)
 
-# ----- PLOTTING -----
+plot_data_uniform <- bind_rows(ref_uniform, uniform_data_multi) %>%
+  mutate(linetype = ifelse(group == "Reference", "Reference", "Focal"))
+plot_data_nonuniform <- bind_rows(ref_uniform, nonuniform_data_multi) %>%
+  mutate(linetype = ifelse(group == "Reference", "Reference", "Focal"))
 
-# Uniform DIF plot
-p1 <- ggplot(plot_data_uniform, aes(x = theta, y = prob, color = group, linetype = type)) +
+# --- Plot: Uniform DIF Magnitude ---
+theoryIRTUniformUnifb<- ggplot(plot_data_uniform, aes(x = theta, y = prob, color = group, linetype = linetype)) +
   geom_line(size = 1.2) +
-  labs(title = "Uniform DIF: Shift in Difficulty",
-       x = expression(theta), y = "P(θ)") +
-  theme_minimal() +
-  scale_color_brewer(palette = "Set1")
+  scale_color_manual(values = okabe_ito ) +
+  scale_linetype_manual(
+    values = c(
+      "Reference" = "dashed",
+      "Focal"     = "solid"
+    ),guide = "none") +
+  labs(
+    x = expression(paste("Latent Ability ", theta)),
+    y = "Probability of Correct Response"
+  ) +
+  theme_minimal(base_size = 14)+
+  legend_inside
 
-# Non-uniform DIF plot
-p2 <- ggplot(plot_data_nonuniform, aes(x = theta, y = prob, color = group, linetype = type)) +
+ggsave(
+  filename = "plots/theoryIRTUniformUnifb.png",
+  plot     = theoryIRTUniformUnifb,
+  width    = 6, 
+  height   = 4, 
+  dpi      = 300
+)
+
+
+# --- Plot: Non-uniform DIF Magnitude ---
+theoryIRTNONUniformUnifa <- ggplot(plot_data_nonuniform, aes(x = theta, y = prob, color = group,linetype = linetype)) +
   geom_line(size = 1.2) +
-  labs(title = "Non-Uniform DIF: Change in Discrimination",
-       x = expression(theta), y = "P(θ)") +
-  theme_minimal() +
-  scale_color_brewer(palette = "Set2")
+  scale_color_manual(values = okabe_ito) +
+  scale_linetype_manual(
+    values = c(
+      "Reference" = "dashed",
+      "Focal"     = "solid"
+    ),guide = "none") +
+  labs(
+    x = expression(paste("Latent Ability ", theta)),
+    y = "Probability of Correct Response"
+  ) +
+  theme_minimal(base_size = 14) +
+  legend_inside
 
-# Display both
-p1
-p2
+ggsave(
+  filename = "plots/theoryIRTNONUniformUnifa.png",
+  plot     = theoryIRTNONUniformUnifa,
+  width    = 6, 
+  height   = 4, 
+  dpi      = 300
+)
+
+
+
 ################################################################################
 ###############################################################################¨
 #B.Simulations plots
@@ -98,8 +265,8 @@ p2
 #Data loading
 load("results/variable-n-res-U.RData")
 load("results/variable-n-U.RData")
-
-
+res_total$`10`$metadata
+tab
 #Extracting information from tab
 tab_df <- as.data.frame(matrix(unlist(tab), nrow = 8,ncol=45, byrow = TRUE))
 tab_df<- t(tab_df)
@@ -110,19 +277,19 @@ tab_df <- data.frame(tab_df)
 tab_df$method <- methods
 
 small_tab <- tab_df[, c("n", "power", "rejection", 'method')]
-
+tab_df[, c("n", "power", 'method')]
 
 #Plotting
 nUniformPower <- ggplot(small_tab, aes(x = as.numeric(n), y = as.numeric(power), color = method)) +
   geom_line() +
   geom_point() +
-  labs(x = "n", y = "Power", color = "Method") +
+  labs(x = "n", y = "Power Rate", color = "Method") +
   theme_minimal()
 
 nUniformRejection <- ggplot(tab_df, aes(x = as.numeric(n), y = as.numeric(rejection), color = method)) +
   geom_line() +
   geom_point() +
-  labs(x = "n", y = "Power", color = "Method") +
+  labs(x = "n", y = "Rejection Rate", color = "Method") +
   ylim(0, 0.1) + #To see better what is happening
   theme_minimal()
 
@@ -196,8 +363,8 @@ ggplot(results_extracted, aes(x = as.numeric(n), y = as.numeric(vote_ratio), col
 #1.2 NON-UNIFORM
 rm(list = ls())
 #Data loading
-load("results/variable-n-res-NU.RData")
-load("results/variable-n-NU-U.RData")
+load("results/variable-n-res-NONU.RData")
+load("results/variable-n-NONU.RData")
 
 
 #Extracting information from tab
@@ -210,7 +377,7 @@ tab_df <- data.frame(tab_df)
 tab_df$method <- methods
 
 small_tab <- tab_df[, c("n", "power", "rejection", 'method')]
-
+tab_df[, c("n", "power", 'method')]
 
 #Plotting
 nNUniformPower <- ggplot(small_tab, aes(x = as.numeric(n), y = as.numeric(power), color = method)) +

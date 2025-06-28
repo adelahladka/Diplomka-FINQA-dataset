@@ -339,6 +339,8 @@ load("results/penfieldRatio-res.RData")
 save(res_total, file = "results/variable-difSize-res-NONU.RData")
 save(tab, file = "results/variable-difSize-NONU.RData")
 #I should do for non uniform
-tab
 
-res_total
+combined_results_n_U# <- combine_vote_ratios(res_total, samples_n)
+combined_results_n_NONU <-combine_vote_ratios(res_total, samples_n)
+
+res_total$`10`$metadata$paramF
