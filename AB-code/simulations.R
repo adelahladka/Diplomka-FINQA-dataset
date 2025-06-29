@@ -58,11 +58,11 @@ for (i in 1:ncol(ratios_R)) {
     I = 40,
     mu_R = 0,
     mu_F = 0,
-    type = c(0, 0.025),
-    diffs_nonunif = 1,
+    type = c(0.025, 0),
+    diffs_unif = 1,
     seed_arg = 2025,
     diff_random = FALSE,
-    statistics = list(MantelB = TRUE, MantelNUB = TRUE, BresB = FALSE, LogB = TRUE, SIBB = FALSE, cSIBB = TRUE)
+    statistics = list(MantelB = TRUE, MantelNUB = FALSE, BresB = FALSE, LogB = TRUE, SIBB = TRUE, cSIBB = FALSE)
   )
   
   tab <- rbind(
@@ -72,7 +72,7 @@ for (i in 1:ncol(ratios_R)) {
       n = 1000,
       rat = paste0(ratio.size[1], ":", ratio.size[2]),
       I = 40,
-      DIF_type = "nonuniform",
+      DIF_type = "uniform",
       DIF_proportion = 0.025,
       DIF_size = 1,
       power = unlist(calculate_power_rate(res)),
@@ -83,8 +83,6 @@ for (i in 1:ncol(ratios_R)) {
   res_total[[paste0(ratio.size[1], ":", ratio.size[2])]] <- res
   message(sprintf("Completed iteration %s at %s", paste(ratio.size, collapse = ":"), date()))
 }
-res_total$`1:1`$metadata
-tab
 ###############################################################################
 #Ratio testing as per Penfiled THIS
 
@@ -325,19 +323,19 @@ timing_results <- rbind(timing_results, new_row)
 timing_results[c(1,8,9,10,11),c(1,5,7,9)]
 tab
 
-
+tab$
 tab2
 res_total2$N700_R5_F2$metadata
 # save results
-save(tab2, file = "results/variable-I-rat-NONU.RData")
+save(tab2, file = "results/variable-ratio-U.RData")
 
-save(res_total2, file = "results/variable-I-rat-res-NONU.RData")
+save(res_total2, file = "results/variable-ratio-res-U.RData")
 #save(res_total2, file = "results/penfieldRatio-resNU.RData")
 
 load("results/penfieldRatio-res.RData")
 
-save(res_total, file = "results/variable-difSize-res-NONU.RData")
-save(tab, file = "results/variable-difSize-NONU.RData")
+save(res_total, file = "results/variable-ratio-res-U.RData")
+save(tab, file = "results/variable-ratio-U.RData")
 #I should do for non uniform
 
 combined_results_n_U# <- combine_vote_ratios(res_total, samples_n)
