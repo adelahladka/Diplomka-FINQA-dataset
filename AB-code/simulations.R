@@ -332,13 +332,85 @@ save(tab2, file = "results/variable-ratio-U.RData")
 save(res_total2, file = "results/variable-ratio-res-U.RData")
 #save(res_total2, file = "results/penfieldRatio-resNU.RData")
 
-load("results/penfieldRatio-res.RData")
-
 save(res_total, file = "results/variable-ratio-res-U.RData")
 save(tab, file = "results/variable-ratio-U.RData")
 #I should do for non uniform
 
-combined_results_n_U# <- combine_vote_ratios(res_total, samples_n)
+
+
+#Vote ratio --------------------------------------------------------------------
+#Scenario 1: N varied
+rm(list = ls())
+source("functions.R")
+samples_n <- c(10,20,30, 40, 50, 60, 70, 80, 100, 200, 400, 500, 1000,1200,2000)
+load("results/variable-n-res-U.RData")
+combined_results_n_U <- combine_vote_ratios(res_total, samples_n)
+#-----------------------------------------------------------------------------
+#rm(list = ls())
+#source("functions.R")
+#samples_n <- c(10,20,30, 40, 50, 60, 70, 80, 100, 200, 400, 500, 1000,1200,2000)
+load("results/variable-n-res-NONU.RData")
 combined_results_n_NONU <-combine_vote_ratios(res_total, samples_n)
 
-res_total$`10`$metadata$paramF
+################################################################################
+#Scenario 2: I varied
+load("results/variable-I-res-U.RData")
+samples_I <- c(20, 40, 50, 60, 70, 80, 100, 200)
+combined_results_I_U <- combine_vote_ratios(res_total, samples_I)
+#-------------------------------------------------------------------------------7
+load("results/variable-I-res-NONU.RData")
+combined_results_I_NONU <- combine_vote_ratios(res_total, samples_I)
+combined_results_I_NONU$item
+################################################################################
+#Scenario 3: I varied gamma varried
+load("results/variable-I-rat-res-U.RData")
+samples_Irat <- c('I20', 'I40', 'I50', 'I60', 'I70', 'I80', 'I100', 'I200')
+combined_results_I_rat_U <- combine_vote_ratios(res_total2, samples_Irat)
+#-------------------------------------------------------------------------------7
+load("results/variable-I-rat-res-NONU.RData")
+combined_results_I_rat_NONU <- combine_vote_ratios(res_total2, samples_Irat)
+
+################################################################################
+#Scenario 4: rho varied
+ratios_R <- c("1:1", "2:1", "3:1", "4:1", "1:2", "1:3", "1:4")
+load("results/variable-ratio-res-U.RData")
+combined_results_rho_U <- combine_vote_ratios(res_total, ratios_R)
+#-------------------------------------------------------------------------------7
+load("results/variable-ratio-res-NONU.RData")
+combined_results_rho_NONU <- combine_vote_ratios(res_total, ratios_R)
+
+
+################################################################################
+#Scenario 2: dfiSIze varied
+difSize <- c(0.4, 0.6, 0.8, 1.0, 1.2, 1.5)
+load("results/variable-difSize-res-U.RData")
+combined_results_difSize_U <- combine_vote_ratios(res_total, difSize)
+#-------------------------------------------------------------------------------7
+load("results/variable-difSize-res-NONU.RData")
+combined_results_difSize_NONU <- combine_vote_ratios(res_total, difSize)
+
+
+
+
+
+item_1 <- combined_results_I_U[combined_results_I_U$item == 1, ]
+item_1_N <- combined_results_I_NONU[combined_results_I_NONU$item == 1, ]
+item_2 <- combined_results_I_U[combined_results_I_U$item == 2, ]
+  item_2_N <- combined_results_I_NONU[combined_results_I_NONU$item == 2, ]
+item_3 <- combined_results_I_U[combined_results_I_U$item == 3, ]
+item_3_N <- combined_results_I_NONU[combined_results_I_NONU$item == 3, ]
+item_4 <- combined_results_I_U[combined_results_I_U$item == 4, ]
+item_4_N <- combined_results_I_NONU[combined_results_I_NONU$item == 4, ]
+item_5 <- combined_results_I_U[combined_results_I_U$item == 5, ]
+item_5_N <- combined_results_I_NONU[combined_results_I_NONU$item == 5, ]
+item_6 <- combined_results_I_U[combined_results_I_U$item == 6, ]
+item_6_N <- combined_results_I_NONU[combined_results_I_NONU$item == 6, ]
+item_7 <- combined_results_I_U[combined_results_I_U$item == 7, ]
+item_7_N <- combined_results_I_NONU[combined_results_I_NONU$item == 7, ]
+item_8 <- combined_results_I_U[combined_results_I_U$item == 8, ]
+item_8_N <- combined_results_I_NONU[combined_results_I_NONU$item == 8, ]
+item_9 <- combined_results_I_U[combined_results_I_U$item == 9, ]
+item_9_N <- combined_results_I_NONU[combined_results_I_NONU$item == 9, ]
+item_10 <- combined_results_I_U[combined_results_I_U$item == 10, ]
+item_10_N <- combined_results_I_NONU[combined_results_I_NONU$item == 10, ]
+

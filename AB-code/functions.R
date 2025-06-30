@@ -432,8 +432,9 @@ calculate_itemwise_detection <- function(input, cutoffs = c(0.5, 0.8, 0.95), inc
 combine_vote_ratios <- function(res_total, samples_n) {
   all_results <- do.call(rbind, lapply(samples_n, function(n) {
     df <- calculate_itemwise_detection(res_total[[as.character(n)]])
-    df$sample_size <- as.numeric(n)
-    df[, c("sample_size", "item", "method", "type", "vote_ratio")]
+    df$variable <- n  # keep it as-is, works with character or numeric
+    df[, c("variable", "item", "method", "type", "vote_ratio")]
   }))
   return(all_results)
 }
+

@@ -275,11 +275,11 @@ legend_inside <- theme(
 ################################################################################
 #SCENARIO 1: DIF when parameter N is varied-------------------------------------
 #1.1 UNIFORM------------------------------------------------------------------
-
+rm(list = ls())
 #Data loading
 load("results/variable-n-res-U.RData")
 load("results/variable-n-U.RData")
-
+okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
 #Extracting information from tab
 tab_df <- as.data.frame(matrix(unlist(tab), nrow = 8,ncol=45, byrow = TRUE))
 tab_df<- t(tab_df)
@@ -308,6 +308,7 @@ nUniformPower <- ggplot(small_tab, aes(x = as.numeric(N), y = as.numeric(power),
   geom_point() +
   labs(x = "Number of respondents N", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:3]) +
   legend_inside
 
 nUniformRejection <- ggplot(tab_df, aes(x = as.numeric(N), y = as.numeric(rejection), color = method)) +
@@ -316,6 +317,7 @@ nUniformRejection <- ggplot(tab_df, aes(x = as.numeric(N), y = as.numeric(reject
   labs(x = "Number of respondents N", y = "Rejection Rate r", color = "Method") +
   ylim(0, 0.1) + #To see better what is happening
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:3]) +
   legend_inside
 
 
@@ -352,14 +354,12 @@ ggsave(
   height   = 6,    # adjust as you like
   dpi      = 300
 )
-nUniform_combined
 
 #1.2 NON-UNIFORM----------------------------------------------------------------
 rm(list = ls())
 #Data loading
 load("results/variable-n-res-NONU.RData")
 load("results/variable-n-NONU.RData")
-
 
 #Extracting information from tab
 tab_df <- as.data.frame(matrix(unlist(tab), nrow = 8,ncol=90, byrow = TRUE))
@@ -381,12 +381,15 @@ legend_inside <- theme(
   legend.title = element_text(size = 10),
   legend.text = element_text(size = 9)  # ← smaller legend labels
 )
+ okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
+
 
 nNUniformPower <- ggplot(small_tab, aes(x = as.numeric(N), y = as.numeric(power), color = method)) +
   geom_line() +
   geom_point() +
   labs(x = "Number of respondents N", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:6]) +
   legend_inside
 
 nNUniformRejection <- ggplot(tab_df, aes(x = as.numeric(N), y = as.numeric(rejection), color = method)) +
@@ -395,6 +398,7 @@ nNUniformRejection <- ggplot(tab_df, aes(x = as.numeric(N), y = as.numeric(rejec
   labs(x = "Number of respondents N", y = "Rejection Rate r", color = "Method") +
   ylim(0, 0.1) + #To see better what is happening
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:6]) +
   legend_inside
 
 
@@ -450,9 +454,12 @@ tab_df <- data.frame(tab_df)
 notimes <- nrow(tab_df) / 3
 methods <- rep(c("MH", "LR", "SIB"), notimes)
 tab_df$method <- methods
-
-small_tab <- tab_df[, c("I", "power", "rejection", 'method')]
-
+tab_df <- tab_df %>%
+  mutate(DIFItems = as.numeric(I) * as.numeric(gamma))
+small_tab <- tab_df[, c("I","DIFItems", "power", "rejection", 'method')]
+small_tab <- small_tab %>%
+  mutate(xlabel = paste0(I, " (", DIFItems, ")")) %>%
+  arrange(as.numeric(I))  # make sure it's ordered
 
 #Plotting
 legend_inside <- theme(
@@ -463,22 +470,45 @@ legend_inside <- theme(
   legend.title = element_text(size = 10),
   legend.text = element_text(size = 9)  # ← smaller legend labels
 )
+#Plotting
+ okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
 
-IUniformPower <- ggplot(small_tab, aes(x = as.numeric(I), y = as.numeric(power), color = method)) +
-  geom_line() +
+
+
+
+# Create unique x-axis labels in the correct order
+xlabel_levels <- unique(paste0(small_tab$I, " (", small_tab$DIFItems, ")"))
+
+IUniformPower <- ggplot(
+  small_tab,
+  aes(
+    x = factor(xlabel, levels = xlabel_levels),
+    y = as.numeric(power),
+    color = method
+  )
+) +
+  geom_line(aes(group = method)) +
   geom_point() +
-  labs(x = "Number of Items I", y = "Power Rate w", color = "Method") +
+  labs(x = "Number of Items I (Number of DIF items γ*I)", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:3]) +
   legend_inside
 
-IUniformRejection <- ggplot(tab_df, aes(x = as.numeric(I), y = as.numeric(rejection), color = method)) +
-  geom_line() +
-  geom_point() +
-  labs(x = "Number of Items I", y = "Rejection Rate r", color = "Method") +
-  #ylim(0, 0.1) + #To see better what is happening
-  theme_minimal(base_size = 14) +
-  legend_inside
 
+IUniformRejection <- ggplot(
+  small_tab,
+  aes(
+    x = factor(xlabel, levels = xlabel_levels),
+    y = as.numeric(rejection),
+    color = method
+  )
+) +
+  geom_line(aes(group = method)) +
+  geom_point() +
+  labs(x = "Number of Items I (Number of DIF items γ*I)", y = "Rejection Rate r", color = "Method") +
+  theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:3]) +
+  legend_inside
 
 # — save individually —
 ggsave(
@@ -549,6 +579,7 @@ ggplot(results_extracted, aes(x = as.numeric(I), y = as.numeric(vote_ratio), col
 
 #2.2 NON-UNIFORM---------------------------------------------------------------
 #Data loading
+rm(list = ls())
 load("results/variable-I-NONU.RData")
 load("results/variable-I-res-NONU.RData")
 
@@ -561,9 +592,13 @@ tab_df <- data.frame(tab_df)
 notimes <- nrow(tab_df) / 6
 methods <- rep(c("MH","MH-NU","MH-L", "MH-H", "LR", "CSIB"), notimes)
 tab_df$method <- methods
-
-small_tab <- tab_df[, c("I", "power", "rejection", 'method')]
-
+tab_df <- tab_df %>%
+  mutate(DIFItems = as.numeric(I) * as.numeric(gamma))
+small_tab <- tab_df[, c("I","DIFItems", "power", "rejection", 'method')]
+small_tab <- small_tab %>%
+  mutate(xlabel = paste0(I, " (", DIFItems, ")")) %>%
+  arrange(as.numeric(I))
+xlabel_levels <- unique(paste0(small_tab$I, " (", small_tab$DIFItems, ")"))
 
 #Plotting
 legend_inside <- theme(
@@ -575,20 +610,39 @@ legend_inside <- theme(
   legend.text = element_text(size = 9)  # ← smaller legend labels
 )
 
-INUniformPower <- ggplot(small_tab, aes(x = as.numeric(I), y = as.numeric(power), color = method)) +
-  geom_line() +
+ okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
+
+INUniformPower <- ggplot(
+  small_tab,
+  aes(
+    x = factor(xlabel, levels = xlabel_levels),
+    y = as.numeric(power),
+    color = method
+  )
+) +
+  geom_line(aes(group = method)) +
   geom_point() +
-  labs(x = "Number of items I", y = "Power Rate w", color = "Method") +
+  labs(x = "Number of Items I (Number of DIF items γ*I)", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:6]) +
   legend_inside
 
-INUniformRejection <- ggplot(tab_df, aes(x = as.numeric(I), y = as.numeric(rejection), color = method)) +
-  geom_line() +
+
+INUniformRejection <- ggplot(
+  small_tab,
+  aes(
+    x = factor(xlabel, levels = xlabel_levels),
+    y = as.numeric(rejection),
+    color = method
+  )
+) +
+  geom_line(aes(group = method)) +
   geom_point() +
-  labs(x = "Number of Items I", y = "Rejection Rate r", color = "Method") +
-  #ylim(0, 0.1) + #To see better what is happening
+  labs(x = "Number of Items I (Number of DIF items γ*I)", y = "Rejection Rate r", color = "Method") +
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:6]) +
   legend_inside
+
 
 # — save individually —
 ggsave(
@@ -659,14 +713,15 @@ calculate_itemwise_detection(res_total$`70`)
 #SCENARIO 3: I and gamma are varied
 #3.1 UNIFORM--------------------------------------------------------------------
 #Data loading
+rm(list = ls())
 load("results/variable-I-rat-U.RData")
 load("results/variable-I-rat-res-U.RData")
 
-
+tab2
 #Extracting information from tab
-tab_df <- as.data.frame(matrix(unlist(tab), nrow = 8,ncol=24, byrow = TRUE))
+tab_df <- as.data.frame(matrix(unlist(tab2), nrow = 8,ncol=24, byrow = TRUE))
 tab_df<- t(tab_df)
-colnames(tab_df) <- c('M', 'N', 'I', 'type', 'gamma', 'difSize', 'power', 'rejection')
+colnames(tab_df) <- c('M', 'ratio', 'I', 'type', 'gamma', 'difSize', 'power', 'rejection')
 tab_df <- data.frame(tab_df)
 #tab_df <- tab_df[91:192,]
 notimes <- nrow(tab_df) / 3
@@ -685,12 +740,15 @@ legend_inside <- theme(
   legend.title = element_text(size = 10),
   legend.text = element_text(size = 9)  # ← smaller legend labels
 )
+ okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
+
 
 IRATUniformPower <- ggplot(small_tab, aes(x = as.numeric(I), y = as.numeric(power), color = method)) +
   geom_line() +
   geom_point() +
   labs(x = "Number of Items I", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:3]) +
   legend_inside
 
 IRATUniformRejection <- ggplot(tab_df, aes(x = as.numeric(I), y = as.numeric(rejection), color = method)) +
@@ -699,6 +757,7 @@ IRATUniformRejection <- ggplot(tab_df, aes(x = as.numeric(I), y = as.numeric(rej
   labs(x = "Number of Items I", y = "Rejection Rate r", color = "Method") +
   #ylim(0, 0.1) + #To see better what is happening
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:3]) +
   legend_inside
 
 
@@ -739,13 +798,14 @@ ggsave(
 
 #3.2 NON-UNIFORM----------------------------------------------------------------
 #Data loading
+rm(list = ls())
 load("results/variable-I-rat-NONU.RData")
 load("results/variable-I-rat-res-NONU.RData")
 
 #Extracting information from tab
-tab_df <- as.data.frame(matrix(unlist(tab), nrow = 8,ncol=48, byrow = TRUE))
+tab_df <- as.data.frame(matrix(unlist(tab2), nrow = 8,ncol=48, byrow = TRUE))
 tab_df<- t(tab_df)
-colnames(tab_df) <- c('M', 'N', 'I', 'type', 'gamma', 'difSize', 'power', 'rejection')
+colnames(tab_df) <- c('M', 'ratio', 'I', 'type', 'gamma', 'difSize', 'power', 'rejection')
 tab_df <- data.frame(tab_df)
 #tab_df <- tab_df[112:153,]
 notimes <- nrow(tab_df) / 6
@@ -765,11 +825,15 @@ legend_inside <- theme(
   legend.text = element_text(size = 9)  # ← smaller legend labels
 )
 
+ okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
+
+
 IRATNUniformPower <- ggplot(small_tab, aes(x = as.numeric(I), y = as.numeric(power), color = method)) +
   geom_line() +
   geom_point() +
   labs(x = "Number of items I", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:6]) +
   legend_inside
 
 IRATNUniformRejection <- ggplot(tab_df, aes(x = as.numeric(I), y = as.numeric(rejection), color = method)) +
@@ -778,6 +842,7 @@ IRATNUniformRejection <- ggplot(tab_df, aes(x = as.numeric(I), y = as.numeric(re
   labs(x = "Number of Items I", y = "Rejection Rate r", color = "Method") +
   #ylim(0, 0.1) + #To see better what is happening
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:6]) +
   legend_inside
 
 
@@ -819,9 +884,12 @@ ggsave(
 #SCENARIO 4: ratio rho is varied
 
 #4.1 UNIFORM----------------------------------------------------------------------
+rm(list = ls())
 load("results/variable-ratio-res-U.RData")
 load("results/variable-ratio-U.RData")
 
+
+tab
 #Extracting information from tab
 tab_df <- as.data.frame(matrix(unlist(tab), nrow = 9,ncol=21, byrow = TRUE))
 tab_df<- t(tab_df)
@@ -843,19 +911,23 @@ legend_inside <- theme(
   legend.title = element_text(size = 10),
   legend.text = element_text(size = 9)  # ← smaller legend labels
 )
+ okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
 
 
 rhoUniformPower <- ggplot(small_tab, aes(x = rho, y = as.numeric(power), color = method)) +
-  geom_line() +
+  geom_line(aes(group = method)) +  # explicitly connect lines by method
   geom_point() +
   labs(x = "Ratio rho", y = "Power Rate w", color = "Method") +
+  theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:3]) +
   legend_inside
 
-rhoUniformRejection <- ggplot(tab_df, aes(x = 'rho', y = as.numeric(rejection), color = method)) +
-  geom_line() +
+rhoUniformRejection <- ggplot(small_tab, aes(x =rho, y = as.numeric(rejection), color = method)) +
+  geom_line(aes(group = method)) +
   geom_point() +
-  labs(x = "Ratio rho", y = "Rejection Rate r", color = "Method")
+  labs(x = "Ratio rho", y = "Rejection Rate r", color = "Method") +
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:3]) +
   legend_inside
 
 #Saving-----------------------------------------------------------------------
@@ -898,14 +970,14 @@ rm(list = ls())
 #Data loading
 load("results/variable-ratio-res-NONU.RData")
 load("results/variable-ratio-NONU.RData")
-
+tab
 
 #Extracting information from tab
-tab_df <- as.data.frame(matrix(unlist(tab), nrow = 8,ncol=42, byrow = TRUE))
+tab_df <- as.data.frame(matrix(unlist(tab), nrow = 9,ncol=42, byrow = TRUE))
 tab_df<- t(tab_df)
 notimes <- nrow(tab_df) / 6
 methods <- rep(c("MH","MH-NU","MH-L", "MH-H", "LR", "CSIB"), notimes)
-colnames(tab_df) <- c('M', 'N', 'I', 'type', 'gamma', 'difSize', 'power', 'rejection')
+colnames(tab_df) <- c('M', 'N',"rho", 'I', 'type', 'gamma', 'difSize', 'power', 'rejection')
 tab_df <- data.frame(tab_df)
 tab_df$method <- methods
 
@@ -920,21 +992,24 @@ legend_inside <- theme(
   legend.title = element_text(size = 10),
   legend.text = element_text(size = 9)  # ← smaller legend labels
 )
+ okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
 
 
-rhoNUniformPower <- ggplot(small_tab, aes(x = as.numeric(rho), y = as.numeric(power), color = method)) +
-  geom_line() +
+
+rhoNUniformPower <- ggplot(small_tab, aes(x = rho, y = as.numeric(power), color = method)) +
+  geom_line(aes(group = method)) +  # explicitly connect lines by method
   geom_point() +
   labs(x = "Ratio rho", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:6]) +
   legend_inside
 
-rhoNUniformRejection <- ggplot(tab_df, aes(x = as.numeric(rho), y = as.numeric(rejection), color = method)) +
-  geom_line() +
+rhoNUniformRejection <- ggplot(small_tab, aes(x =rho, y = as.numeric(rejection), color = method)) +
+  geom_line(aes(group = method)) +
   geom_point() +
   labs(x = "Ratio rho", y = "Rejection Rate r", color = "Method") +
-  ylim(0, 0.1) + #To see better what is happening
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:6]) +
   legend_inside
 
 #Saving-----------------------------------------------------------------------
@@ -1005,12 +1080,15 @@ legend_inside <- theme(
   legend.text = element_text(size = 9)  # ← smaller legend labels
 )
 
+ okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
+
 
 difSizeUniformPower <- ggplot(small_tab, aes(x = as.numeric(difSize), y = as.numeric(power), color = method)) +
   geom_line() +
   geom_point() +
   labs(x = "Size of DIF δ", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:3]) +
   legend_inside
 
 difSizeUniformRejection <- ggplot(small_tab, aes(x = as.numeric(difSize), y = as.numeric(rejection), color = method)) +
@@ -1019,6 +1097,7 @@ difSizeUniformRejection <- ggplot(small_tab, aes(x = as.numeric(difSize), y = as
   labs(x = "Size of DIF δ", y = "Rejection Rate r", color = "Method") +
   ylim(0, 0.1) + #To see better what is happening
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:3]) +
   legend_inside
 
 
@@ -1084,6 +1163,8 @@ legend_inside <- theme(
   legend.text = element_text(size = 9)  # ← smaller legend labels
 )
 
+ okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
+
 
 
 difSizeNUniformPower <- ggplot(small_tab, aes(x = as.numeric(difSize), y = as.numeric(power), color = method)) +
@@ -1091,6 +1172,7 @@ difSizeNUniformPower <- ggplot(small_tab, aes(x = as.numeric(difSize), y = as.nu
   geom_point() +
   labs(x = "Size of DIF Δ", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:6]) +
   legend_inside
 
 difSizeNUniformRejection <- ggplot(small_tab, aes(x = as.numeric(difSize), y = as.numeric(rejection), color = method)) +
@@ -1099,6 +1181,7 @@ difSizeNUniformRejection <- ggplot(small_tab, aes(x = as.numeric(difSize), y = a
   labs(x = "Size of DIF Δ", y = "Rejection Rate r", color = "Method") +
   ylim(0, 0.1) + #To see better what is happening
   theme_minimal(base_size = 14) +
+  scale_color_manual(values = okabe_ito[1:6]) +
   legend_inside
 
 
