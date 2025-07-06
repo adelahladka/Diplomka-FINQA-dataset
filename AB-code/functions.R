@@ -20,6 +20,7 @@ generate_group_sizes <- function(n_total, ratio = c(1, 1)) { # Reference: Focal
   return(list(n = n_total, n1 = n1, n2 = n2)) # Return total and both group sizes
 }
 
+
 # ============================
 # Function: generate_param
 # Purpose: Generate item parameters for 3PL model: b (difficulty), a (discrimination), c (guessing)
@@ -225,8 +226,16 @@ simulation_abe3 <- function(N, n1, n2, skup, param1, param2, theta1, theta2,
 simul_total3 <- function(N, n_total, rat_n, I, mu_R, mu_F,
                          type = c(0, 0), # proportions of unif and nonunif DIF
                          diffs_unif = 0.5, diffs_nonunif = 1, seed_arg = 2025, diff_random = TRUE,
-                         statistics = list(MantelB = TRUE, MantelNUB = TRUE, BresB = TRUE, LogB = TRUE, SIBB = TRUE, cSIBB = TRUE)) {
+                         statistics = list(MantelB = TRUE, MantelNUB = TRUE, BresB = TRUE, LogB = TRUE, SIBB = TRUE, cSIBB = TRUE), master_params = NULL) {
   start_time <- Sys.time()
+  #-----------------------------
+  # Generate parameters - use master_params if provided - important for varying number of items
+  #--------------------------------
+  if (!is.null(master_params)) {
+    param1_ab <- master_params
+  } else {
+    param1_ab <- generate_param(I, seed_arg) # original behavior
+  }
   #-------------------
   # generating data
   #-------------------
@@ -239,7 +248,7 @@ simul_total3 <- function(N, n_total, rat_n, I, mu_R, mu_F,
   set.seed(seed_arg+100)
   theta2_ab <- rnorm(n2, mean = mu_F, sd = 1) # generates latent abilities for focal group from normal distribution
   
-  param1_ab <- generate_param(I, seed_arg) # generates paramaters for items for focal group
+  #param1_ab <- generate_param(I, seed_arg) # generates paramaters for items for focal group
   param2_ab <- param1_ab # generates paramaters for items for focal group
   skup <- c(rep(0, n1), rep(1, n2)) 
 

@@ -150,14 +150,14 @@ ratios <- list(
 )
 
 ratios2 <- list(
-  c(1/20, 1/20),
-  c(1/40, 1/40),
-  c(1/50, 1/50),
-  c(1/60, 1/60),
-  c(1/70, 1/70),
-  c(1/80, 1/80),
-  c(1/100, 1/100),
-  c(1/200, 1/200)
+  c(0, 1/20),
+  c(0, 1/40),
+  c(0, 1/50),
+  c(0, 1/60),
+  c(0, 1/70),
+  c(0, 1/80),
+  c(0, 1/100),
+  c(0, 1/200)
 )
 
 
@@ -177,8 +177,9 @@ for (i in seq_along(samples_I)) {
     type = type.size,
     diffs_nonunif = 1,
     seed_arg = 2025,
+    diff_random = FALSE,
     statistics = list(
-      MantelB = TRUE,
+      MantelB = FALSE,
       MantelNUB = TRUE,
       BresB = FALSE,
       LogB = TRUE,
@@ -201,16 +202,14 @@ for (i in seq_along(samples_I)) {
     )
   )
   
-  res_total2[[paste0("I", item.size)]] <- res
+  res_total2[[item.size]] <- res
   message(sprintf("Completed iteration for I = %d at %s", item.size, date()))
 }
-tab2
-
-20*0.05
 
 
 
 
+res_total2[[20]]$metadata
 
 
 
@@ -323,19 +322,19 @@ timing_results <- rbind(timing_results, new_row)
 timing_results[c(1,8,9,10,11),c(1,5,7,9)]
 tab
 
-tab$
+tab
 tab2
 res_total2$N700_R5_F2$metadata
 # save results
-save(tab2, file = "results/variable-ratio-U.RData")
+save(tab2, file = "results/variable-I-rat-NONU.RData")
 
-save(res_total2, file = "results/variable-ratio-res-U.RData")
+save(res_total2, file = "results/variable-I-rat-res-NONU.RData")
 #save(res_total2, file = "results/penfieldRatio-resNU.RData")
 
 save(res_total, file = "results/variable-ratio-res-U.RData")
 save(tab, file = "results/variable-ratio-U.RData")
 #I should do for non uniform
-
+res_total2$
 
 
 #Vote ratio --------------------------------------------------------------------
