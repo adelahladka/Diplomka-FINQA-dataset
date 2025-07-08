@@ -21,16 +21,16 @@ for (dif.size in difSize) {
   # uniformní DIF o velikosti 1, 5% DIFových položek (tj. 1)
   
   res <- simul_total3(
-    N =1000,
-    n_total =1000, rat_n = c(1, 1), I = 40,
+    N =1,
+    n_total =400, rat_n = c(1, 1), I = 40,
     mu_R = 0, mu_F = 0,
     type = c(0, 0.025), diffs_nonunif = dif.size, seed_arg = 2025, diff_random = FALSE,
-   statistics =  list(MantelB = TRUE, MantelNUB = TRUE, BresB = FALSE, LogB = TRUE, SIBB = FALSE, cSIBB = TRUE))
+   statistics =  list(MantelB = FALSE, MantelNUB = TRUE, BresB = FALSE, LogB = TRUE, SIBB = FALSE, cSIBB = TRUE))
   tab <- rbind(
     tab,
     cbind(
       N = 1000,
-      n = 1000,
+      n = 400,
       I = 40 ,
       DIF_type = "nonuniform",
       DIF_proportion = 0.025,
@@ -43,6 +43,7 @@ for (dif.size in difSize) {
   message(sprintf("Completed iteration %.2f at %s", dif.size, date()))
 }
 tab
+res_total$`1.2`$metadata
 calculate_itemwise_detection2(res_total$`10`, include_all_items = TRUE)
 ###############################################################################
 ratios_R <- cbind(c(1,1), c(2,1), c(3,1), c(4,1), c(1,2), c(1,3), c(1,4))
@@ -53,26 +54,26 @@ for (i in 1:ncol(ratios_R)) {
   
   res <- simul_total3(
     N = 1000,
-    n_total = 1000,
+    n_total = 400,
     rat_n = ratio.size,
     I = 40,
     mu_R = 0,
     mu_F = 0,
-    type = c(0.025, 0),
-    diffs_unif = 1,
+    type = c(0, 0.025),
+    diffs_nonunif = 1,
     seed_arg = 2025,
     diff_random = FALSE,
-    statistics = list(MantelB = TRUE, MantelNUB = FALSE, BresB = FALSE, LogB = TRUE, SIBB = TRUE, cSIBB = FALSE)
+    statistics = list(MantelB = FALSE, MantelNUB = TRUE, BresB = FALSE, LogB = TRUE, SIBB = FALSE, cSIBB = TRUE)
   )
   
   tab <- rbind(
     tab,
     cbind(
       N = 1000,
-      n = 1000,
+      n = 400,
       rat = paste0(ratio.size[1], ":", ratio.size[2]),
       I = 40,
-      DIF_type = "uniform",
+      DIF_type = "nonuniform",
       DIF_proportion = 0.025,
       DIF_size = 1,
       power = unlist(calculate_power_rate(res)),
@@ -83,6 +84,8 @@ for (i in 1:ncol(ratios_R)) {
   res_total[[paste0(ratio.size[1], ":", ratio.size[2])]] <- res
   message(sprintf("Completed iteration %s at %s", paste(ratio.size, collapse = ":"), date()))
 }
+
+
 ###############################################################################
 #Ratio testing as per Penfiled THIS
 
@@ -136,6 +139,14 @@ for (i in seq_along(n_tot)) {
 ###############################################################################
 #One DIF item always
 samples_I <- c(20, 40, 50, 60, 70, 80, 100, 200)
+# Generate master item parameters once for the largest test
+set.seed(2025)  # Use same seed as in your generate_param function
+max_I <- max(samples_I)  # This will be 200
+master_params <- generate_param(max_I, seed_arg = 2025)
+
+# One DIF item always - using consistent parameters
+
+
 
 # One DIF item in each case: 1/I proportion of DIF items
 ratios <- list(
@@ -166,7 +177,7 @@ res_total2 <- list()
 
 for (i in seq_along(samples_I)) {
   item.size <- samples_I[i]
-  type.size <- ratios2[[i]]
+  type.size <- ratios[[i]]
   
   res <- simul_total3(
     N = 1000,
@@ -175,17 +186,17 @@ for (i in seq_along(samples_I)) {
     I = item.size,
     mu_R = 0, mu_F = 0,
     type = type.size,
-    diffs_nonunif = 1,
+    diffs_unif = 1,
     seed_arg = 2025,
     diff_random = FALSE,
     statistics = list(
-      MantelB = FALSE,
-      MantelNUB = TRUE,
+      MantelB = TRUE,
+      MantelNUB = FALSE,
       BresB = FALSE,
       LogB = TRUE,
-      SIBB = FALSE,
-      cSIBB = TRUE
-    )
+      SIBB = TRUE,
+      cSIBB = FALSE
+    ), master_params = master_params[1:item.size, ]  # Use first item.size items from master
   )
   
   tab2 <- rbind(
@@ -193,8 +204,9 @@ for (i in seq_along(samples_I)) {
     cbind(
       N_total = 1000,
       ratio_ = "1:1",
+      n_sample = 1000,
       I = item.size,
-      DIF_type = "nonuniform",
+      DIF_type = "uniform",
       DIF_proportion = 1 / item.size,
       DIF_size = 1,
       power = unlist(calculate_power_rate(res)),
@@ -205,14 +217,6 @@ for (i in seq_along(samples_I)) {
   res_total2[[item.size]] <- res
   message(sprintf("Completed iteration for I = %d at %s", item.size, date()))
 }
-
-
-
-
-res_total2[[20]]$metadata
-
-
-
 
 ####
 # Zkoumání parametru a
@@ -326,13 +330,13 @@ tab
 tab2
 res_total2$N700_R5_F2$metadata
 # save results
-save(tab2, file = "results/variable-I-rat-NONU.RData")
+save(tab2, file = "results/variable-I-rat-U.RData")
 
-save(res_total2, file = "results/variable-I-rat-res-NONU.RData")
+save(res_total2, file = "results/variable-I-rat-res-U.RData")
 #save(res_total2, file = "results/penfieldRatio-resNU.RData")
 
-save(res_total, file = "results/variable-ratio-res-U.RData")
-save(tab, file = "results/variable-ratio-U.RData")
+save(res_total, file = "results/variable-ratio-res-NONU.RData")
+save(tab, file = "results/variable-ratio-NONU.RData")
 #I should do for non uniform
 res_total2$
 
