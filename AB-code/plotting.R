@@ -330,6 +330,12 @@ tab_df[, c("N", "power", 'method')]
 
 #Plotting#PlottingMantelStat
 legend_inside <- theme(
+  axis.text = element_text(size = 12),    # bigger x/y tick labels
+  axis.title = element_text(size = 16), 
+  axis.text.x = element_text(angle = 45, hjust = 1),
+  # bigger axis titles
+  #legend.title = element_text(size = 14),
+  #legend.text = element_text(size = 13),
   legend.position = c(0.99,0.01),
   legend.position.inside = "bottom-right",
   legend.justification = c("right", "bottom"),
@@ -344,6 +350,10 @@ nUniformPower <- ggplot(small_tab, aes(x = as.numeric(N), y = as.numeric(power),
   geom_point() +
   labs(x = "Number of respondents N", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
+  scale_x_continuous(
+    breaks = c(0, 100, 200, 400,500,1000, 1200, 2000),
+    labels = c("0","100","200", "400","500", "1000", "1200", "2000")
+  )+
   ylim(0, 1) +
   scale_color_manual(values = okabe_ito[1:3], name= NULL) +
   legend_inside
@@ -353,7 +363,12 @@ nUniformRejection <- ggplot(small_tab, aes(x = as.numeric(N), y = as.numeric(rej
   geom_point() +
   labs(x = "Number of respondents N", y = "Rejection Rate r", color = "Method") +
   ylim(0, 0.1) + #To see better what is happening
+  #scale_x_continuous(breaks = unique(as.numeric(small_tab$N)))+
   theme_minimal(base_size = 14) +
+  scale_x_continuous(
+    breaks = c(0, 100, 200, 400,500,1000, 1200, 2000),
+    labels = c("0","100","200", "400","500", "1000", "1200", "2000")
+  )+
   scale_color_manual(values = okabe_ito[1:3], name= NULL) +
   legend_inside
 
@@ -378,8 +393,8 @@ ggsave(
 
 # turn them into a single grob
 nUniform_combined <- grid.arrange(
-  nUniformPower,
   nUniformRejection,
+  nUniformPower,
   ncol = 2  # two columns side by side
 )
 
@@ -400,6 +415,10 @@ nUniformRejectionSmall <- ggplot(small_tab, aes(x = as.numeric(N), y = as.numeri
   xlim(10, 100) + #To see better what is happening
   theme_minimal(base_size = 14) +
   ylim(0, 1) +
+  scale_x_continuous(
+    breaks = c(0, 100, 200, 400,500,1000, 1200, 2000),
+    labels = c("0","100","200", "400","500", "1000", "1200", "2000")
+  )+
   scale_color_manual(values = okabe_ito[1:3], name= NULL) +
   legend_inside
 
@@ -408,6 +427,10 @@ nUniformPowerSmall <- ggplot(small_tab, aes(x = as.numeric(N), y = as.numeric(po
   geom_point() +
   labs(x = "Number of respondents N", y = "Power Rate w", color = "Method") +
   xlim(10,100) +
+  scale_x_continuous(
+    breaks = c(0, 100, 200, 400,500,1000, 1200, 2000),
+    labels = c("0","100","200", "400","500", "1000", "1200", "2000")
+  )+
   theme_minimal(base_size = 14) +
   scale_color_manual(values = okabe_ito[1:3], name= NULL) +
   legend_inside
@@ -446,9 +469,14 @@ tab_df$method <- methods
 small_tab <- tab_df[, c("N", "power", "rejection", 'method')]
 small_tab <- small_tab[!small_tab$method == "MH", ]
 
-small_tab[small_tab$method == "MH-NU", ]
 #Plottin
 legend_inside <- theme(
+  axis.text = element_text(size = 12),    # bigger x/y tick labels
+  axis.title = element_text(size = 16), 
+  axis.text.x = element_text(angle = 45, hjust = 1),
+  # bigger axis titles
+  #legend.title = element_text(size = 14),
+  #legend.text = element_text(size = 13),
   legend.position = c(0.99,0.01),
   legend.position.inside = "bottom-right",
   legend.justification = c("right", "bottom"),
@@ -465,6 +493,10 @@ nNUniformPower <- ggplot(small_tab, aes(x = as.numeric(N), y = as.numeric(power)
   labs(x = "Number of respondents N", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
   ylim(0, 1) +
+  scale_x_continuous(
+    breaks = c(0, 100, 200, 400,500,1000, 1200, 2000),
+    labels = c("0","100","200", "400","500", "1000", "1200", "2000")
+  )+
   scale_color_manual(values = okabe_ito[1:5], name= NULL) +
   legend_inside
 
@@ -474,6 +506,10 @@ nNUniformRejection <- ggplot(small_tab, aes(x = as.numeric(N), y = as.numeric(re
   labs(x = "Number of respondents N", y = "Rejection Rate r", color = "Method") +
   ylim(0, 0.1) + #To see better what is happening
   theme_minimal(base_size = 14) +
+  scale_x_continuous(
+    breaks = c(0, 100, 200, 400,500,1000, 1200, 2000),
+    labels = c("0","100","200", "400","500", "1000", "1200", "2000")
+  )+
   scale_color_manual(values = okabe_ito[1:5], name= NULL) +
   legend_inside
 
@@ -498,8 +534,8 @@ ggsave(
 
 # turn them into a single grob
 nNUniform_combined <- grid.arrange(
-  nNUniformPower,
   nNUniformRejection,
+  nNUniformPower,
   ncol = 2  # two columns side by side
 )
 
@@ -582,13 +618,17 @@ small_tab <- small_tab %>%
 tab_df[, c("I", "power", 'method')]
 #Plotting
 legend_inside <- theme(
+  axis.text = element_text(size = 12),    # bigger x/y tick labels
+  axis.title = element_text(size = 16),
+  # bigger axis titles
+  #legend.title = element_text(size = 14),
+  #legend.text = element_text(size = 13),
   legend.position = c(0.99,0.01),
   legend.position.inside = "bottom-right",
   legend.justification = c("right", "bottom"),
   legend.background = element_rect(fill = alpha("white", 0.8), color = NA),
   legend.title = element_text(size = 10),
-  legend.text = element_text(size = 9)  # ← smaller legend labels
-)
+  legend.text = element_text(size = 9))  # ← smaller legend labels
 #Plotting
  okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
 
@@ -834,33 +874,48 @@ calculate_itemwise_detection(res_total$`70`)
 #SCENARIO 3: I and gamma are varied
 #3.1 UNIFORM--------------------------------------------------------------------
 #Data loading
-  rm(list = ls())
+rm(list = ls())
+# Load the first dataset
 load("results/variable-I-rat-U.RData")
 load("results/variable-I-rat-res-U.RData")
+tab1 <- as.data.frame(matrix(unlist(tab2), ncol = 24, byrow = TRUE))
+tab1 <- t(tab1)
+colnames(tab1) <- c('M', 'ratio', 'N', 'I', 'type', 'gamma', 'difSize', 'power', 'rejection')
+tab1 <- data.frame(tab1)
 
-tab2
-#Extracting information from tab
-tab_df <- as.data.frame(matrix(unlist(tab2), nrow = 8,ncol=24, byrow = TRUE))
-tab_df<- t(tab_df)
-colnames(tab_df) <- c('M', 'ratio', 'I', 'type', 'gamma', 'difSize', 'power', 'rejection')
-tab_df <- data.frame(tab_df)
-#tab_df <- tab_df[91:192,]
+# Load the second dataset
+load("results/variable-I-rat-U-5-10.RData")
+load("results/variable-I-rat-res-U-5-10.RData")
+tab2 <- as.data.frame(matrix(unlist(tab2), ncol = 6, byrow = TRUE))
+tab2 <- t(tab2)
+colnames(tab2) <- c('M', 'ratio', 'N', 'I', 'type', 'gamma', 'difSize', 'power', 'rejection')
+tab2 <- data.frame(tab2)
+
+# Combine the two tables row-wise
+tab_df <- rbind(tab1, tab2)
+
+# Add the method column
 notimes <- nrow(tab_df) / 3
 methods <- rep(c("MH", "LR", "SIB"), notimes)
 tab_df$method <- methods
+#Extracting information from tab
 
 small_tab <- tab_df[, c("I", "power", "rejection", 'method')]
-tab_df[, c("I", "rejection", 'method')]
+tab_df[, c("I", "power", 'method')]
 
 #Plotting
 legend_inside <- theme(
+  axis.text = element_text(size = 12),    # bigger x/y tick labels
+  axis.title = element_text(size = 16),
+  # bigger axis titles
+  #legend.title = element_text(size = 14),
+  #legend.text = element_text(size = 13),
   legend.position = c(0.99,0.01),
   legend.position.inside = "bottom-right",
   legend.justification = c("right", "bottom"),
   legend.background = element_rect(fill = alpha("white", 0.8), color = NA),
   legend.title = element_text(size = 10),
-  legend.text = element_text(size = 9)  # ← smaller legend labels
-)
+  legend.text = element_text(size = 9))  # ← smaller legend labels
  okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
 
 
@@ -870,6 +925,7 @@ IRATUniformPower <- ggplot(small_tab, aes(x = as.numeric(I), y = as.numeric(powe
   labs(x = "Number of Items I", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
   ylim(0, 1) +
+  scale_x_continuous(breaks = unique(as.numeric(small_tab$I)))+
   scale_color_manual(values = okabe_ito[1:3], name= NULL) +
   legend_inside
 
@@ -878,10 +934,11 @@ IRATUniformRejection <- ggplot(tab_df, aes(x = as.numeric(I), y = as.numeric(rej
   geom_point() +
   labs(x = "Number of Items I", y = "Rejection Rate r", color = "Method") +
   ylim(0, 0.1) + #To see better what is happening
+  scale_x_continuous(breaks = unique(as.numeric(small_tab$I)))+
   theme_minimal(base_size = 14) +
   scale_color_manual(values = okabe_ito[1:3], name= NULL) +
   legend_inside
-
+tab2
 
 # — save individually —
 ggsave(
@@ -903,8 +960,8 @@ ggsave(
 
 # turn them into a single grob
 IRATUniform_combined <- grid.arrange(
-  IRATUniformPower,
   IRATUniformRejection,
+  IRATUniformPower,
   ncol = 2  # two columns side by side
 )
 
@@ -919,41 +976,47 @@ ggsave(
 
 
 #3.2 NON-UNIFORM----------------------------------------------------------------
-#Data loading
+# Load the first dataset
 rm(list = ls())
 load("results/variable-I-rat-NONU.RData")
 load("results/variable-I-rat-res-NONU.RData")
+tab1 <- as.data.frame(matrix(unlist(tab2), ncol = 40, byrow = TRUE))
+tab1 <- t(tab1)
+colnames(tab1) <- c('M', 'ratio', 'N', 'I', 'type', 'gamma', 'difSize', 'power', 'rejection')
+tab1 <- data.frame(tab1)
 
+res_total2[[10]]$metadata
+# Load the second dataset
+load("results/variable-I-rat-NONU-5-10.RData")
+load("results/variable-I-rat-res-NONU-5-10.RData")
+tab2 <- as.data.frame(matrix(unlist(tab2), ncol = 10, byrow = TRUE))
+tab2 <- t(tab2)
+colnames(tab2) <- c('M', 'ratio', 'N', 'I', 'type', 'gamma', 'difSize', 'power', 'rejection')
+tab2 <- data.frame(tab2)
 
-res_total2[[60]]$metadata$paramF
+# Combine the two tables row-wise
+tab_df <- rbind(tab1, tab2)
 
-#0.6242140
-#0.4977009
-#
-tab2
-#Extracting information from tab
-tab_df <- as.data.frame(matrix(unlist(tab2), nrow = 8,ncol=40, byrow = TRUE))
-tab_df<- t(tab_df)
-colnames(tab_df) <- c('M', 'ratio', 'I', 'type', 'gamma', 'difSize', 'power', 'rejection')
-tab_df <- data.frame(tab_df)
-#tab_df <- tab_df[112:153,]
+# Add method labels (5 methods this time)
 notimes <- nrow(tab_df) / 5
-methods <- rep(c("MH-NU","MH-L", "MH-H", "LR", "CSIB"), notimes)
+methods <- rep(c("MH-NU", "MH-L", "MH-H", "LR", "CSIB"), notimes)
 tab_df$method <- methods
-
 small_tab <- tab_df[, c("I", "power", "rejection", 'method')]
-small_tab <- small_tab[!small_tab$method == "MH", ]
-tab_df[, c("I", "rejection", 'method')]
+#small_tab <- small_tab[!small_tab$method == "MH", ]
+tab_df[, c("I", "power", 'method')]
 
-#Plotting
 legend_inside <- theme(
+  axis.text = element_text(size = 12),    # bigger x/y tick labels
+  axis.title = element_text(size = 16),
+  # bigger axis titles
+  #legend.title = element_text(size = 14),
+  #legend.text = element_text(size = 13),
   legend.position = c(0.99,0.01),
   legend.position.inside = "bottom-right",
   legend.justification = c("right", "bottom"),
   legend.background = element_rect(fill = alpha("white", 0.8), color = NA),
   legend.title = element_text(size = 10),
-  legend.text = element_text(size = 9)  # ← smaller legend labels
-)
+  legend.text = element_text(size = 9))
 
  okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
 
@@ -964,6 +1027,7 @@ IRATNUniformPower <- ggplot(small_tab, aes(x = as.numeric(I), y = as.numeric(pow
   labs(x = "Number of items I", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
   ylim(0, 1) +
+  scale_x_continuous(breaks = unique(as.numeric(small_tab$I)))+
   scale_color_manual(values = okabe_ito[1:5], name= NULL) +
   legend_inside
 
@@ -972,6 +1036,7 @@ IRATNUniformRejection <- ggplot(small_tab, aes(x = as.numeric(I), y = as.numeric
   geom_point() +
   labs(x = "Number of Items I", y = "Rejection Rate r", color = "Method") +
   ylim(0, 0.1) + #To see better what is happening
+  scale_x_continuous(breaks = unique(as.numeric(small_tab$I)))+
   theme_minimal(base_size = 14) +
   scale_color_manual(values = okabe_ito[1:5], name= NULL) +
   legend_inside
@@ -997,8 +1062,8 @@ ggsave(
 
 # turn them into a single grob
 IRATNUniform_combined <- grid.arrange(
-  IRATNUniformPower,
   IRATNUniformRejection,
+  IRATNUniformPower,
   ncol = 2  # two columns side by side
 )
 
@@ -1035,20 +1100,25 @@ tab_df[, c("rho", "rejection", 'method')]
 
 #Plotting
 legend_inside <- theme(
+  axis.text = element_text(size = 12),    # bigger x/y tick labels
+  axis.title = element_text(size = 16),
+  # bigger axis titles
+  #legend.title = element_text(size = 14),
+  #legend.text = element_text(size = 13),
   legend.position = c(0.99,0.01),
   legend.position.inside = "bottom-right",
   legend.justification = c("right", "bottom"),
   legend.background = element_rect(fill = alpha("white", 0.8), color = NA),
   legend.title = element_text(size = 10),
-  legend.text = element_text(size = 9)  # ← smaller legend labels
-)
+  legend.text = element_text(size = 9))
+
  okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
 
 
 rhoUniformPower <- ggplot(small_tab, aes(x = rho, y = as.numeric(power), color = method)) +
   geom_line(aes(group = method)) +  # explicitly connect lines by method
   geom_point() +
-  labs(x = "Ratio rho", y = "Power Rate w", color = "Method") +
+  labs(x = "Ratio ρ", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
   ylim(0, 1) +
   scale_color_manual(values = okabe_ito[1:3], name= NULL) +
@@ -1057,7 +1127,7 @@ rhoUniformPower <- ggplot(small_tab, aes(x = rho, y = as.numeric(power), color =
 rhoUniformRejection <- ggplot(small_tab, aes(x =rho, y = as.numeric(rejection), color = method)) +
   geom_line(aes(group = method)) +
   geom_point() +
-  labs(x = "Ratio rho", y = "Rejection Rate r", color = "Method") +
+  labs(x = "Ratio ρ", y = "Rejection Rate r", color = "Method") +
   theme_minimal(base_size = 14) +
   ylim(0, 0.1) +
   scale_color_manual(values = okabe_ito[1:3], name= NULL) +
@@ -1084,8 +1154,8 @@ ggsave(
 
 # turn them into a single grob
 rhoUniform_combined <- grid.arrange(
-  rhoUniformPower,
   rhoUniformRejection,
+  rhoUniformPower,
   ncol = 2  # two columns side by side
 )
 
@@ -1118,13 +1188,18 @@ small_tab <- small_tab[!small_tab$method == "MH", ]
 tab_df[, c("rho", "rejection", 'method')]
 #Plotting
 legend_inside <- theme(
+  axis.text = element_text(size = 12),    # bigger x/y tick labels
+  axis.title = element_text(size = 16),
+  # bigger axis titles
+  #legend.title = element_text(size = 14),
+  #legend.text = element_text(size = 13),
   legend.position = c(0.99,0.01),
   legend.position.inside = "bottom-right",
   legend.justification = c("right", "bottom"),
   legend.background = element_rect(fill = alpha("white", 0.8), color = NA),
   legend.title = element_text(size = 10),
-  legend.text = element_text(size = 9)  # ← smaller legend labels
-)
+  legend.text = element_text(size = 9))
+
  okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
 
 
@@ -1132,7 +1207,7 @@ legend_inside <- theme(
 rhoNUniformPower <- ggplot(small_tab, aes(x = rho, y = as.numeric(power), color = method)) +
   geom_line(aes(group = method)) +  # explicitly connect lines by method
   geom_point() +
-  labs(x = "Ratio rho", y = "Power Rate w", color = "Method") +
+  labs(x = "Ratio ρ", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
   ylim(0, 1) +
   scale_color_manual(values = okabe_ito[1:5], name= NULL) +
@@ -1141,7 +1216,7 @@ rhoNUniformPower <- ggplot(small_tab, aes(x = rho, y = as.numeric(power), color 
 rhoNUniformRejection <- ggplot(small_tab, aes(x =rho, y = as.numeric(rejection), color = method)) +
   geom_line(aes(group = method)) +
   geom_point() +
-  labs(x = "Ratio rho", y = "Rejection Rate r", color = "Method") +
+  labs(x = "Ratio ρ", y = "Rejection Rate r", color = "Method") +
   theme_minimal(base_size = 14) +
   ylim(0, 0.1) +
   scale_color_manual(values = okabe_ito[1:5], name= NULL) +
@@ -1168,8 +1243,8 @@ ggsave(
 
 # turn them into a single grob
 rhoNUniform_combined <- grid.arrange(
-  rhoNUniformPower,
   rhoNUniformRejection,
+  rhoNUniformPower,
   ncol = 2  # two columns side by side
 )
 
@@ -1193,7 +1268,6 @@ rm(list = ls())
 load("results/variable-difSize-res-U.RData")
 load("results/variable-difSize-U.RData")
 
-tab
 #Extracting information from tab
 tab_df <- as.data.frame(matrix(unlist(tab), nrow = 8,ncol=24, byrow = TRUE))
 tab_df<- t(tab_df)
@@ -1209,13 +1283,17 @@ tab_df[, c("difSize", "rejection", 'method')]
 
 #Plotting
 legend_inside <- theme(
+  axis.text = element_text(size = 12),    # bigger x/y tick labels
+  axis.title = element_text(size = 16),
+  # bigger axis titles
+  #legend.title = element_text(size = 14),
+  #legend.text = element_text(size = 13),
   legend.position = c(0.99,0.01),
   legend.position.inside = "bottom-right",
   legend.justification = c("right", "bottom"),
   legend.background = element_rect(fill = alpha("white", 0.8), color = NA),
   legend.title = element_text(size = 10),
-  legend.text = element_text(size = 9)  # ← smaller legend labels
-)
+  legend.text = element_text(size = 9))
 
  okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
 
@@ -1226,6 +1304,7 @@ difSizeUniformPower <- ggplot(small_tab, aes(x = as.numeric(difSize), y = as.num
   labs(x = "Size of DIF δ", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
   ylim(0, 1) +
+  scale_x_continuous(breaks = unique(as.numeric(small_tab$difSize)))+
   scale_color_manual(values = okabe_ito[1:3], name= NULL) +
   legend_inside
 
@@ -1234,6 +1313,7 @@ difSizeUniformRejection <- ggplot(small_tab, aes(x = as.numeric(difSize), y = as
   geom_point() +
   labs(x = "Size of DIF δ", y = "Rejection Rate r", color = "Method") +
   ylim(0, 0.1) + #To see better what is happening
+  scale_x_continuous(breaks = unique(as.numeric(small_tab$difSize)))+
   theme_minimal(base_size = 14) +
   scale_color_manual(values = okabe_ito[1:3], name= NULL) +
   legend_inside
@@ -1259,8 +1339,8 @@ ggsave(
 
 # turn them into a single grob
 difSizeUniform_combined <- grid.arrange(
-  difSizeUniformPower,
   difSizeUniformRejection,
+  difSizeUniformPower,
   ncol = 2  # two columns side by side
 )
 
@@ -1294,13 +1374,17 @@ small_tab <- small_tab[!small_tab$method == "MH", ]
 tab_df[, c("difSize", "rejection", 'method')]
 #Plotting
 legend_inside <- theme(
+  axis.text = element_text(size = 12),    # bigger x/y tick labels
+  axis.title = element_text(size = 16),
+  # bigger axis titles
+  #legend.title = element_text(size = 14),
+  #legend.text = element_text(size = 13),
   legend.position = c(0.99,0.01),
   legend.position.inside = "bottom-right",
   legend.justification = c("right", "bottom"),
   legend.background = element_rect(fill = alpha("white", 0.8), color = NA),
   legend.title = element_text(size = 10),
-  legend.text = element_text(size = 9)  # ← smaller legend labels
-)
+  legend.text = element_text(size = 9))
 
  okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
 
@@ -1312,6 +1396,7 @@ difSizeNUniformPower <- ggplot(small_tab, aes(x = as.numeric(difSize), y = as.nu
   labs(x = "Size of DIF Δ", y = "Power Rate w", color = "Method") +
   theme_minimal(base_size = 14) +
   ylim(0, 1) + 
+  scale_x_continuous(breaks = unique(as.numeric(small_tab$difSize)))+
   scale_color_manual(values = okabe_ito[1:5], name= NULL) +
   legend_inside
 
@@ -1321,6 +1406,7 @@ difSizeNUniformRejection <- ggplot(small_tab, aes(x = as.numeric(difSize), y = a
   labs(x = "Size of DIF Δ", y = "Rejection Rate r", color = "Method") +
   ylim(0, 0.1) + #To see better what is happening
   theme_minimal(base_size = 14) +
+  scale_x_continuous(breaks = unique(as.numeric(small_tab$difSize)))+
   scale_color_manual(values = okabe_ito[1:5], name= NULL) +
   legend_inside
 
@@ -1345,8 +1431,8 @@ ggsave(
 
 # turn them into a single grob
 difSizeNUniform_combined <- grid.arrange(
-  difSizeNUniformPower,
   difSizeNUniformRejection,
+  difSizeNUniformPower,
   ncol = 2  # two columns side by side
 )
 
@@ -1358,26 +1444,6 @@ ggsave(
   height   = 6,    # adjust as you like
   dpi      = 300
 )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

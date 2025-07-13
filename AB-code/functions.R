@@ -5,7 +5,6 @@
 # ============================
 library(ltm)
 library(difR)
-
 # ============================
 # Function: generate_group_sizes
 # Purpose: Calculate group sizes for focal and reference groups given total N and ratio
@@ -227,7 +226,7 @@ simul_total3 <- function(N, n_total, rat_n, I, mu_R, mu_F,
                          type = c(0, 0), # proportions of unif and nonunif DIF
                          diffs_unif = 0.5, diffs_nonunif = 1, seed_arg = 2025, diff_random = TRUE,
                          statistics = list(MantelB = TRUE, MantelNUB = TRUE, BresB = TRUE, LogB = TRUE, SIBB = TRUE, cSIBB = TRUE), master_params = NULL) {
-  start_time <- Sys.time()
+   #start_time <- Sys.time()
   #-----------------------------
   # Generate parameters - use master_params if provided - important for varying number of items
   #--------------------------------
@@ -290,8 +289,8 @@ simul_total3 <- function(N, n_total, rat_n, I, mu_R, mu_F,
     }
   }
   # print(I)
+  start_time <- Sys.time()
   res <- simulation_abe3(N, n1, n2, skup, param1_ab, param2_ab, theta1_ab, theta2_ab, statistics, I) 
-
   end_time <- Sys.time()
 
   # Metadata for output

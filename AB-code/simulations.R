@@ -11,40 +11,38 @@ tab <- c()
 res_total <- list() 
 #Useful for making some pretty graphs
 samples_n <- c(10,20,30, 40, 50, 60, 70, 80, 100, 200, 400, 500, 1000,1200,2000)
-samples_I <- c(20, 40, 50, 60, 70, 80, 100, 200)
+samples_I <- c(5, 10, 20, 40, 50, 60, 70, 80, 100, 200)
 difSize <- c(0.4, 0.6, 0.8, 1.0, 1.2, 1.5)
 
 
-for (dif.size in difSize) {
+for (sample.size in samples_n) {
   # základní nastavení, pro různé sample sizes zkoušíme jednoduchý setting
   # poměr reference:focal 1:1, 20 položek, N(0, 1) rozdělení traitu,
   # uniformní DIF o velikosti 1, 5% DIFových položek (tj. 1)
   
   res <- simul_total3(
-    N =1,
-    n_total =400, rat_n = c(1, 1), I = 40,
+    N =1000,
+    n_total =sample.size, rat_n = c(1, 1), I = 40,
     mu_R = 0, mu_F = 0,
-    type = c(0, 0.025), diffs_nonunif = dif.size, seed_arg = 2025, diff_random = FALSE,
-   statistics =  list(MantelB = FALSE, MantelNUB = TRUE, BresB = FALSE, LogB = TRUE, SIBB = FALSE, cSIBB = TRUE))
+    type = c(0.025,0), diffs_unif = 1, seed_arg = 2025, diff_random = FALSE,
+   statistics =  list(MantelB = FALSE, MantelNUB = FALSE, BresB = FALSE, LogB = TRUE, SIBB = FALSE, cSIBB = FALSE))
   tab <- rbind(
     tab,
     cbind(
       N = 1000,
-      n = 400,
+      n = sample.size,
       I = 40 ,
-      DIF_type = "nonuniform",
+      DIF_type = "uniform",
       DIF_proportion = 0.025,
-      DIF_size = dif.size,
+      DIF_size = 1,
       power = unlist(calculate_power_rate(res)),
       rejection = calculate_rejection_rate(res)
     )
   )
-  res_total[[as.character(dif.size)]] <- res
-  message(sprintf("Completed iteration %.2f at %s", dif.size, date()))
+  res_total[[as.character(sample.size)]] <- res
+  message(sprintf("Completed iteration %.2f at %s", sample.size, date()))
 }
-tab
-res_total$`1.2`$metadata
-calculate_itemwise_detection2(res_total$`10`, include_all_items = TRUE)
+
 ###############################################################################
 ratios_R <- cbind(c(1,1), c(2,1), c(3,1), c(4,1), c(1,2), c(1,3), c(1,4))
 for (i in 1:ncol(ratios_R)) {
@@ -138,18 +136,20 @@ for (i in seq_along(n_tot)) {
 }
 ###############################################################################
 #One DIF item always
-samples_I <- c(20, 40, 50, 60, 70, 80, 100, 200)
+samples_I <- c(5, 10, 20, 40, 50, 60, 70, 80, 100, 200)
 # Generate master item parameters once for the largest test
 set.seed(2025)  # Use same seed as in your generate_param function
 max_I <- max(samples_I)  # This will be 200
 master_params <- generate_param(max_I, seed_arg = 2025)
 
 # One DIF item always - using consistent parameters
-
+samples_I <- c(5, 10)
 
 
 # One DIF item in each case: 1/I proportion of DIF items
 ratios <- list(
+  c(1/5,0),
+  c(1/10,0),
   c(1/20, 0),
   c(1/40, 0),
   c(1/50, 0),
@@ -161,6 +161,8 @@ ratios <- list(
 )
 
 ratios2 <- list(
+  c(0, 1/5),
+  c(0, 1/10),
   c(0, 1/20),
   c(0, 1/40),
   c(0, 1/50),
@@ -177,7 +179,7 @@ res_total2 <- list()
 
 for (i in seq_along(samples_I)) {
   item.size <- samples_I[i]
-  type.size <- ratios[[i]]
+  type.size <- ratios2[[i]]
   
   res <- simul_total3(
     N = 1000,
@@ -186,16 +188,16 @@ for (i in seq_along(samples_I)) {
     I = item.size,
     mu_R = 0, mu_F = 0,
     type = type.size,
-    diffs_unif = 1,
+    diffs_nonunif = 1,
     seed_arg = 2025,
     diff_random = FALSE,
     statistics = list(
-      MantelB = TRUE,
-      MantelNUB = FALSE,
+      MantelB = FALSE,
+      MantelNUB = TRUE,
       BresB = FALSE,
       LogB = TRUE,
-      SIBB = TRUE,
-      cSIBB = FALSE
+      SIBB = FALSE,
+      cSIBB = TRUE
     ), master_params = master_params[1:item.size, ]  # Use first item.size items from master
   )
   
@@ -206,7 +208,7 @@ for (i in seq_along(samples_I)) {
       ratio_ = "1:1",
       n_sample = 1000,
       I = item.size,
-      DIF_type = "uniform",
+      DIF_type = "nonuniform",
       DIF_proportion = 1 / item.size,
       DIF_size = 1,
       power = unlist(calculate_power_rate(res)),
@@ -246,41 +248,46 @@ points(item7_index, res_total2$N700_R5_F2$metadata$paramR['Item7','a'], col = "r
 res_total2$N700_R5_F2$metadata$paramF['Item7','b']
 ##############################################################################
 
-
-
-
-
+difSIBTEST
+sibTest
+??SIBTEST
+mirt::SIBTEST
 ##############################################################################
 ##Time measuring per method
 n_tot <- c(700, 1000, 1200, 1500) #should be trigerred together
 ratios <- c(c(5,2),c(1,1),c(10,2),c(2,1))
-# Define the six methods and their names
-method_names <- c("MantelB","MantelNUB", "LogB","BresB", "SIBB", "cSIBB")
-# Preallocate a list to hold each run’s output
-isolated_runs <- vector("list", length(method_names))
-names(isolated_runs) <- method_names
+# Define only the methods you want to run
+methods_to_run <- c("MantelB", "LogB", "SIBB")
 
-for (m in method_names) {
-  # build a statistics list with only m = TRUE
+# Define all possible method names
+method_names <- c("MantelB", "MantelNUB", "LogB", "BresB", "SIBB", "cSIBB")
+
+# Preallocate a list to hold each run’s output
+isolated_runs <- vector("list", length(methods_to_run))
+names(isolated_runs) <- methods_to_run
+
+
+for (m in methods_to_run) {
+  # Build a statistics list: all FALSE except the current method
   stats_list <- setNames(as.list(rep(FALSE, length(method_names))), method_names)
   stats_list[[m]] <- TRUE
   
-  # run simul_total3 with only that method turned on
+  # Run simul_total3 with only the current method enabled
   isolated_runs[[m]] <- simul_total3(
-    N           = 1000,
-    n_total     = 1000,
-    rat_n       = c(1, 1),
-    I           = 40,
-    mu_R        = 0,
-    mu_F        = 0,
-    type        = c(0, 0.025),    # 5% uniform, 0% non-uniform
-    diffs_unif  = 0,
-    diffs_nonunif = 1,
-    seed_arg    = 2025,
-    statistics  = stats_list
+    N            = 1000,
+    n_total      = 1000,
+    rat_n        = c(1, 1),
+    I            = 40,
+    mu_R         = 0,
+    mu_F         = 0,
+    type         = c(0.025, 0),    # adjust for uniform or non-uniform DIF
+    diffs_unif   = 1,
+    diffs_nonunif= 0,
+    seed_arg     = 2025,
+    diff_random  = FALSE,
+    statistics   = stats_list
   )
 }
-
 
 
 
@@ -297,10 +304,7 @@ get_time <- function(run, method) {
     return(NA)
   }
 }
-calculate_itemwise_detection(isolated_runs$MantelNUB)
-calculate_itemwise_detection(isolated_runs$LogB)
-calculate_itemwise_detection(isolated_runs$cSIBB)
-
+isolated_runs$MantelNUB
 
 # Collect shared metadata
 n_total <- isolated_runs$LogB
@@ -309,9 +313,9 @@ I <- isolated_runs$cSIBB$metadata$I
 
 # Create a new row of results
 new_row <- data.frame(
-  n_total = n_total,
-  n_ratio = n_ratio,
-  I = I,
+  n_total = 1000,
+  n_ratio = "1:1",
+  I = 40,
   Mantel = get_time(isolated_runs, "MantelB"),
   MantelNormal = get_time(isolated_runs, "MantelNUB"),
   Bres = get_time(isolated_runs, "BresB"),
@@ -323,23 +327,19 @@ new_row <- data.frame(
 # Add to your results table
 timing_results <- rbind(timing_results, new_row)
 
-timing_results[c(1,8,9,10,11),c(1,5,7,9)]
-tab
 
-tab
-tab2
-res_total2$N700_R5_F2$metadata
+
 # save results
-save(tab2, file = "results/variable-I-rat-U.RData")
+save(tab2, file = "results/variable-I-rat-NONU-5-10.RData")
 
-save(res_total2, file = "results/variable-I-rat-res-U.RData")
+save(res_total2, file = "results/variable-I-rat-res-NONU-5-10.RData")
 #save(res_total2, file = "results/penfieldRatio-resNU.RData")
 
-save(res_total, file = "results/variable-ratio-res-NONU.RData")
-save(tab, file = "results/variable-ratio-NONU.RData")
+save(res_total, file = "results/variable-n-res-U-logreg.RData")
+save(tab, file = "results/variable-n-U-logreg.RData")
 #I should do for non uniform
-res_total2$
 
+citation()
 
 #Vote ratio --------------------------------------------------------------------
 #Scenario 1: N varied
