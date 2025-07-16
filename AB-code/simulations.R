@@ -1,35 +1,49 @@
+# Evaluation
+
 rm(list = ls())
-
 source("functions.R")
-
 set.seed(2025)
+################################################################################
+# ===========================
+# Paramterers
+# N - number of simulation (M in thesis)
+# n_total - Sample size (N in thesis)
+# rat_n - Reference: Focal group (rho in thesis)
+# I - number of items 
+# type = c(a, b) - Proportions of uniform (a) and non-uniform (b) DIF
+# diffs_unif  - DIF effect size for uniform DIF (delta in thesis)
+# diffs_nonunif - DIF effect size for non-uniform DIF (Delta in thesis)
+# diff_random - Randomize the location of DIF items, in case of FALSE DIF items 
+#will begin indexing from 1
+#============================
 
-
-
+################################################################################
+#===========================
+# Scenario 1: Sample size N
+# Scenario 3: DIF effect size
+#============================
 
 tab <- c()
 res_total <- list() 
-#Useful for making some pretty graphs
+
 samples_n <- c(10,20,30, 40, 50, 60, 70, 80, 100, 200, 400, 500, 1000,1200,2000)
-samples_I <- c(5, 10, 20, 40, 50, 60, 70, 80, 100, 200)
 difSize <- c(0.4, 0.6, 0.8, 1.0, 1.2, 1.5)
 
-
-for (sample.size in samples_n) {
-  # základní nastavení, pro různé sample sizes zkoušíme jednoduchý setting
-  # poměr reference:focal 1:1, 20 položek, N(0, 1) rozdělení traitu,
-  # uniformní DIF o velikosti 1, 5% DIFových položek (tj. 1)
-  
+for(sample.size in samples_n) {
   res <- simul_total3(
-    N =1000,
-    n_total =sample.size, rat_n = c(1, 1), I = 40,
+    N = 1000,
+    n_total = sample.size,
+    rat_n = c(1, 1), 
+    I = 40,
     mu_R = 0, mu_F = 0,
-    type = c(0.025,0), diffs_unif = 1, seed_arg = 2025, diff_random = FALSE,
-   statistics =  list(MantelB = FALSE, MantelNUB = FALSE, BresB = FALSE, LogB = TRUE, SIBB = FALSE, cSIBB = FALSE))
+    type = c(0.025,0),  # Needs to be changed depending on type of DIF
+    diffs_unif = 1, # Needs to be changed depending on type of DIF
+    seed_arg = 2025, diff_random = FALSE,
+   statistics =  list(MantelB = FALSE, MantelNUB = FALSE, BresB = FALSE, LogB = FALSE, SIBB = TRUE, cSIBB = FALSE))
   tab <- rbind(
     tab,
     cbind(
-      N = 1000,
+      N = 100,
       n = sample.size,
       I = 40 ,
       DIF_type = "uniform",
@@ -44,12 +58,13 @@ for (sample.size in samples_n) {
 }
 
 ###############################################################################
+#=======================
+# Scenario 2: Varying group ratio rho
+#=======================
+
 ratios_R <- cbind(c(1,1), c(2,1), c(3,1), c(4,1), c(1,2), c(1,3), c(1,4))
 for (i in 1:ncol(ratios_R)) {
-  ratio.size <- ratios_R[, i]  # this gives you c(a, b)
-  
-  #print(ratio.size)
-  
+  ratio.size <- ratios_R[, i]  
   res <- simul_total3(
     N = 1000,
     n_total = 400,
@@ -57,8 +72,8 @@ for (i in 1:ncol(ratios_R)) {
     I = 40,
     mu_R = 0,
     mu_F = 0,
-    type = c(0, 0.025),
-    diffs_nonunif = 1,
+    type = c(0, 0.025), # Needs to be changed depending on type of DIF
+    diffs_nonunif = 1, # Needs to be changed depending on type of DIF
     seed_arg = 2025,
     diff_random = FALSE,
     statistics = list(MantelB = FALSE, MantelNUB = TRUE, BresB = FALSE, LogB = TRUE, SIBB = FALSE, cSIBB = TRUE)
@@ -84,67 +99,16 @@ for (i in 1:ncol(ratios_R)) {
 }
 
 
+
 ###############################################################################
-#Ratio testing as per Penfiled THIS
+#==========================
+#Scenario 4
+#=========================
 
-n_tot <- c(700, 1000, 1200, 1500)
-ratios <- list(c(5, 2), c(1, 1), c(10, 2), c(2, 1))
-
-tab2 <- data.frame()
-res_total2 <- list()
-
-
-for (i in seq_along(n_tot)) {
-  sample.size <- n_tot[i]
-  ratio <- ratios[[i]]
-  
-  res <- simul_total3(
-    N = 1000,
-    n_total = sample.size,
-    rat_n = ratio,
-    I = 40,
-    mu_R = 0, mu_F = 0,
-    type = c(0, 0.025),
-    #diffs_unif = 1,
-    diffs_nonunif = 1,
-    seed_arg = 2025,
-    statistics = list(
-      MantelB = TRUE,
-      MantelNUB = TRUE,
-      BresB = FALSE,
-      LogB = TRUE,
-      SIBB = FALSE,
-      cSIBB = TRUE
-    )
-  )
-  
-  tab2 <- rbind(
-    tab2,
-    cbind(
-      N_total = sample.size,
-      ratio_ref_foc = paste(ratio, collapse = ":"),
-      I = I,
-      DIF_type = "non-uniform",
-      DIF_proportion = 1,
-      DIF_size = 1,
-      power = unlist(calculate_power_rate(res)),
-      rejection = calculate_rejection_rate(res)
-    )
-  )
-  
-  res_total2[[paste0("N", sample.size, "_R", ratio[1], "_F", ratio[2])]] <- res
-}
-###############################################################################
-#One DIF item always
 samples_I <- c(5, 10, 20, 40, 50, 60, 70, 80, 100, 200)
-# Generate master item parameters once for the largest test
-set.seed(2025)  # Use same seed as in your generate_param function
-max_I <- max(samples_I)  # This will be 200
+set.seed(2025) 
+max_I <- max(samples_I)
 master_params <- generate_param(max_I, seed_arg = 2025)
-
-# One DIF item always - using consistent parameters
-samples_I <- c(5, 10)
-
 
 # One DIF item in each case: 1/I proportion of DIF items
 ratios <- list(
@@ -179,7 +143,7 @@ res_total2 <- list()
 
 for (i in seq_along(samples_I)) {
   item.size <- samples_I[i]
-  type.size <- ratios2[[i]]
+  type.size <- ratios2[[i]] # Needs to be changed depending on type of DIF
   
   res <- simul_total3(
     N = 1000,
@@ -198,7 +162,7 @@ for (i in seq_along(samples_I)) {
       LogB = TRUE,
       SIBB = FALSE,
       cSIBB = TRUE
-    ), master_params = master_params[1:item.size, ]  # Use first item.size items from master
+    ), master_params = master_params[1:item.size, ]
   )
   
   tab2 <- rbind(
@@ -219,201 +183,84 @@ for (i in seq_along(samples_I)) {
   res_total2[[item.size]] <- res
   message(sprintf("Completed iteration for I = %d at %s", item.size, date()))
 }
-
-####
-# Zkoumání parametru a
-res_total2N$N700_R5_F2$metadata$paramR
-sorted_matrix <- res_total2N$N700_R5_F2$metadata$paramF[
-  order(res_total2N$N700_R5_F2$metadata$paramF[, "a"]), 
-]
-
-
-
-a_values <- sorted_matrix[, "a"]
-row_labels <- rownames(sorted_matrix)
-
-# Main plot
-plot(a_values, type = "b", pch = 19, col = "blue",
-     xaxt = "n", xlab = "Row Name", ylab = "a",
-     main = "Plot of 'a' by Row Name")
-
-# Add row names as x-axis labels
-axis(1, at = 1:length(row_labels), labels = row_labels, las = 2, cex.axis = 0.7)
-
-# Highlight Item7 in red
-item7_index <- which(row_labels == "Item7")
-points(item7_index, res_total2$N700_R5_F2$metadata$paramR['Item7','a'], col = "red", pch = 19, cex = 1.2)
-
-
-res_total2$N700_R5_F2$metadata$paramF['Item7','b']
 ##############################################################################
-
-difSIBTEST
-sibTest
-??SIBTEST
-mirt::SIBTEST
-##############################################################################
-##Time measuring per method
-n_tot <- c(700, 1000, 1200, 1500) #should be trigerred together
-ratios <- c(c(5,2),c(1,1),c(10,2),c(2,1))
-# Define only the methods you want to run
-methods_to_run <- c("MantelB", "LogB", "SIBB")
-
-# Define all possible method names
-method_names <- c("MantelB", "MantelNUB", "LogB", "BresB", "SIBB", "cSIBB")
-
-# Preallocate a list to hold each run’s output
-isolated_runs <- vector("list", length(methods_to_run))
-names(isolated_runs) <- methods_to_run
+#==================
+# Scenario 5: Penfield ratios
+#==================
 
 
-for (m in methods_to_run) {
-  # Build a statistics list: all FALSE except the current method
-  stats_list <- setNames(as.list(rep(FALSE, length(method_names))), method_names)
-  stats_list[[m]] <- TRUE
+n_tot <- c(700, 1000, 1200, 1500)
+ratios <- list(c(5, 2), c(1, 1), c(10, 2), c(2, 1))
+
+tab2 <- data.frame()
+res_total2 <- list()
+
+
+for (i in seq_along(n_tot)) {
+  sample.size <- n_tot[i]
+  ratio <- ratios[[i]]
   
-  # Run simul_total3 with only the current method enabled
-  isolated_runs[[m]] <- simul_total3(
-    N            = 1000,
-    n_total      = 1000,
-    rat_n        = c(1, 1),
-    I            = 40,
-    mu_R         = 0,
-    mu_F         = 0,
-    type         = c(0.025, 0),    # adjust for uniform or non-uniform DIF
-    diffs_unif   = 1,
-    diffs_nonunif= 0,
-    seed_arg     = 2025,
-    diff_random  = FALSE,
-    statistics   = stats_list
+  res <- simul_total3(
+    N = 1000,
+    n_total = sample.size,
+    rat_n = ratio,
+    I = 40,
+    mu_R = 0, mu_F = 0,
+    type = c(0, 0.025), # Needs to be changed depending on type of DIF
+    #diffs_unif = 1,
+    diffs_nonunif = 1, # Needs to be changed depending on type of DIF
+    seed_arg = 2025,
+    statistics = list(
+      MantelB = TRUE,
+      MantelNUB = TRUE,
+      BresB = FALSE,
+      LogB = TRUE,
+      SIBB = FALSE,
+      cSIBB = TRUE
+    )
   )
+  
+  tab2 <- rbind(
+    tab2,
+    cbind(
+      N_total = sample.size,
+      ratio_ref_foc = paste(ratio, collapse = ":"),
+      I = I,
+      DIF_type = "non-uniform",
+      DIF_proportion = 1,
+      DIF_size = 1,
+      power = unlist(calculate_power_rate(res)),
+      rejection = calculate_rejection_rate(res)
+    )
+  )
+  
+  res_total2[[paste0("N", sample.size, "_R", ratio[1], "_F", ratio[2])]] <- res
 }
 
 
 
-# Initialize or load your tracking data frame
-if (!exists("timing_results")) {
-  timing_results <- data.frame()
-}
-
-# Helper function to safely extract time
-get_time <- function(run, method) {
-  if (!is.null(run[[method]])) {
-    return(run[[method]]$metadata$time_taken)
-  } else {
-    return(NA)
-  }
-}
-isolated_runs$MantelNUB
-
-# Collect shared metadata
-n_total <- isolated_runs$LogB
-n_ratio <- paste(isolated_runs$cSIBB$metadata$rat_n, collapse = ":")
-I <- isolated_runs$cSIBB$metadata$I
-
-# Create a new row of results
-new_row <- data.frame(
-  n_total = 1000,
-  n_ratio = "1:1",
-  I = 40,
-  Mantel = get_time(isolated_runs, "MantelB"),
-  MantelNormal = get_time(isolated_runs, "MantelNUB"),
-  Bres = get_time(isolated_runs, "BresB"),
-  Log = get_time(isolated_runs, "LogB"),
-  SIB = get_time(isolated_runs, "SIBB"),
-  cSIB = get_time(isolated_runs, "cSIBB")
-)
-
-# Add to your results table
-timing_results <- rbind(timing_results, new_row)
-
-
-
-# save results
-save(tab2, file = "results/variable-I-rat-NONU-5-10.RData")
-
-save(res_total2, file = "results/variable-I-rat-res-NONU-5-10.RData")
-#save(res_total2, file = "results/penfieldRatio-resNU.RData")
-
-save(res_total, file = "results/variable-n-res-U-logreg.RData")
-save(tab, file = "results/variable-n-U-logreg.RData")
-#I should do for non uniform
-
-citation()
-
-#Vote ratio --------------------------------------------------------------------
-#Scenario 1: N varied
-rm(list = ls())
-source("functions.R")
-samples_n <- c(10,20,30, 40, 50, 60, 70, 80, 100, 200, 400, 500, 1000,1200,2000)
-load("results/variable-n-res-U.RData")
-combined_results_n_U <- combine_vote_ratios(res_total, samples_n)
-#-----------------------------------------------------------------------------
-#rm(list = ls())
-#source("functions.R")
-#samples_n <- c(10,20,30, 40, 50, 60, 70, 80, 100, 200, 400, 500, 1000,1200,2000)
-load("results/variable-n-res-NONU.RData")
-combined_results_n_NONU <-combine_vote_ratios(res_total, samples_n)
-
-################################################################################
-#Scenario 2: I varied
-load("results/variable-I-res-U.RData")
-samples_I <- c(20, 40, 50, 60, 70, 80, 100, 200)
-combined_results_I_U <- combine_vote_ratios(res_total, samples_I)
-#-------------------------------------------------------------------------------7
-load("results/variable-I-res-NONU.RData")
-combined_results_I_NONU <- combine_vote_ratios(res_total, samples_I)
-combined_results_I_NONU$item
-################################################################################
-#Scenario 3: I varied gamma varried
-load("results/variable-I-rat-res-U.RData")
-samples_Irat <- c('I20', 'I40', 'I50', 'I60', 'I70', 'I80', 'I100', 'I200')
-combined_results_I_rat_U <- combine_vote_ratios(res_total2, samples_Irat)
-#-------------------------------------------------------------------------------7
-load("results/variable-I-rat-res-NONU.RData")
-combined_results_I_rat_NONU <- combine_vote_ratios(res_total2, samples_Irat)
-
-################################################################################
-#Scenario 4: rho varied
-ratios_R <- c("1:1", "2:1", "3:1", "4:1", "1:2", "1:3", "1:4")
-load("results/variable-ratio-res-U.RData")
-combined_results_rho_U <- combine_vote_ratios(res_total, ratios_R)
-#-------------------------------------------------------------------------------7
-load("results/variable-ratio-res-NONU.RData")
-combined_results_rho_NONU <- combine_vote_ratios(res_total, ratios_R)
-
-
-################################################################################
-#Scenario 2: dfiSIze varied
-difSize <- c(0.4, 0.6, 0.8, 1.0, 1.2, 1.5)
-load("results/variable-difSize-res-U.RData")
-combined_results_difSize_U <- combine_vote_ratios(res_total, difSize)
-#-------------------------------------------------------------------------------7
-load("results/variable-difSize-res-NONU.RData")
-combined_results_difSize_NONU <- combine_vote_ratios(res_total, difSize)
 
 
 
 
 
-item_1 <- combined_results_I_U[combined_results_I_U$item == 1, ]
-item_1_N <- combined_results_I_NONU[combined_results_I_NONU$item == 1, ]
-item_2 <- combined_results_I_U[combined_results_I_U$item == 2, ]
-  item_2_N <- combined_results_I_NONU[combined_results_I_NONU$item == 2, ]
-item_3 <- combined_results_I_U[combined_results_I_U$item == 3, ]
-item_3_N <- combined_results_I_NONU[combined_results_I_NONU$item == 3, ]
-item_4 <- combined_results_I_U[combined_results_I_U$item == 4, ]
-item_4_N <- combined_results_I_NONU[combined_results_I_NONU$item == 4, ]
-item_5 <- combined_results_I_U[combined_results_I_U$item == 5, ]
-item_5_N <- combined_results_I_NONU[combined_results_I_NONU$item == 5, ]
-item_6 <- combined_results_I_U[combined_results_I_U$item == 6, ]
-item_6_N <- combined_results_I_NONU[combined_results_I_NONU$item == 6, ]
-item_7 <- combined_results_I_U[combined_results_I_U$item == 7, ]
-item_7_N <- combined_results_I_NONU[combined_results_I_NONU$item == 7, ]
-item_8 <- combined_results_I_U[combined_results_I_U$item == 8, ]
-item_8_N <- combined_results_I_NONU[combined_results_I_NONU$item == 8, ]
-item_9 <- combined_results_I_U[combined_results_I_U$item == 9, ]
-item_9_N <- combined_results_I_NONU[combined_results_I_NONU$item == 9, ]
-item_10 <- combined_results_I_U[combined_results_I_U$item == 10, ]
-item_10_N <- combined_results_I_NONU[combined_results_I_NONU$item == 10, ]
+
+
+
+
+
+
+
+#=================================
+# Saving results
+#================================
+
+#save(res_total, file = "results/variable-n-res-U-logreg.RData")
+#save(tab, file = "results/variable-n-U-logreg.RData")
+
+# For Scenario 4 and 5
+#save(tab2, file = "results/variable-I-rat-NONU-5-10.RData")
+#save(res_total2, file = "results/variable-I-rat-res-NONU-5-10.RData")
+
+
 

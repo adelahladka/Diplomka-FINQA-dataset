@@ -1,4 +1,15 @@
 # Functions for simulations
+# ===========================
+# Paramterers
+# N - number of simulation (M in thesis)
+# n_total - Sample size (N in thesis)
+# rat_n - Reference: Focal group (rho in thesis)
+# I - number of items 
+# type = c(a, b) - Proportions of uniform and non-uniform DIF
+# diffs_unif  - DIF effect size for uniform DIF (delta in thesis)
+# diffs_nonunif - DIF effect size for non-uniform DIF (Delta in thesis)
+# diff_random - Randomize the location of DIF items, in case of FALSE DIF items 
+#will begin indexing from 1
 
 # ============================
 # Packages
@@ -18,7 +29,6 @@ generate_group_sizes <- function(n_total, ratio = c(1, 1)) { # Reference: Focal
 
   return(list(n = n_total, n1 = n1, n2 = n2)) # Return total and both group sizes
 }
-
 
 # ============================
 # Function: generate_param
@@ -384,6 +394,13 @@ calculate_rejection_rate <- function(input) {
 
   return(rejection_results)
 }
+# ============================
+# Function: calculate_itemwise_detection
+# Purpose: function, that takes each times and evaluates,if the item was flagged as dif wrt to all simulations
+# ============================
+
+#Not used in thesis
+
 calculate_itemwise_detection <- function(input, cutoffs = c(0.5, 0.8, 0.95), include_all_items = FALSE) {
   methods <- c()
   if (input$metadata$statistics$MantelB) methods <- c(methods, "Mantel")
@@ -434,8 +451,10 @@ calculate_itemwise_detection <- function(input, cutoffs = c(0.5, 0.8, 0.95), inc
   
   return(results)
 }
-
-
+# ============================
+# Function: combine_vote_ratios
+# Purpose: combine_vote_ratios
+# ============================
 
 combine_vote_ratios <- function(res_total, samples_n) {
   all_results <- do.call(rbind, lapply(samples_n, function(n) {

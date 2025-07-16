@@ -15,7 +15,7 @@ okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00")
 cb_palette <- c("Reference" = "#0072B2", "Focal" = "#E69F00")
 
 # Define theta range
-theta <- seq(-4, 4, length.out = 300)
+theta <- seq(-6, 6, length.out = 300)
 
 # Define logistic function and ICC
 logit <- function(x) 1 / (1 + exp(-x))
@@ -34,11 +34,11 @@ legend_inside <- theme(
 #4PL model (Figure 2)
 # Define 3 sets of item parameters: a, b, c, d
 params <- data.frame(
-  item = factor(c("Item 1", "Item 2", "Item 3")),
-  a = c(0.8, 1.2, 1.5),
-  b = c(-1, 0, 1),
-  c = c(0.1, 0.2, 0.25),
-  d = c(0.9, 0.95, 1)
+  item = factor(c("4PL", "3PL", "2PL", "1PL")),
+  a = c(0.8, 0.8, 0.8, 1),
+  b = c(-2, -1, 0,1),
+  c = c(0.2, 0.2, 0,0),
+  d = c(0.95, 1, 1, 1)
 )
 
 # Generate ICC data
@@ -63,13 +63,14 @@ icc_data <- params %>%
 #4PL model (Figure 2)
 theoryIRT4PL <- ggplot(icc_data, aes(x = theta, y = P, color = item)) +
   geom_line(size = 1.2) +
-  scale_color_manual(values = okabe_ito[1:3], name= NULL) +
+  scale_color_manual(values = okabe_ito[1:4], name= NULL) +
   labs(
     x = expression(paste("Latent Ability ", theta)),
     y = "Probability of Correct Response",
     color = "Item"
   ) +
   theme_minimal() +
+  ylim(0,1)+
   theme(text = element_text(size = 14)) +
   legend_inside
 
@@ -120,6 +121,7 @@ intro_unif <- ggplot(uniform_data, aes(x = theta, y = prob, color = group)) +
     x = expression(paste("Latent Ability ", theta)),
     y = "Probability of Correct Response"
   ) +
+  ylim(0,1) + 
   theme_minimal(base_size = 14) +
   legend_inside
 
@@ -130,6 +132,7 @@ intro_nonunif <- ggplot(nonuniform_data, aes(x = theta, y = prob, color = group)
     x = expression(paste("Latent Ability ", theta)),
     y = "Probability of Correct Response"
   ) +
+  ylim(0,1)+
   theme_minimal(base_size = 14) +
   legend_inside
 
@@ -547,6 +550,45 @@ ggsave(
   height   = 6,    # adjust as you like
   dpi      = 300
 )
+
+
+
+# turn them into a single grob
+nRejection_combined <- grid.arrange(
+  nUniformRejection,
+  nNUniformRejection,
+  ncol = 2  # two columns side by side
+)
+
+# turn them into a single grob
+nPower_combined <- grid.arrange(
+  nUniformPower,
+  nNUniformPower,
+  ncol = 2  # two columns side by side
+)
+
+
+# save the combined plot
+ggsave(
+  filename = "plots/nRejection-combined.png",
+  plot     = nRejection_combined,
+  width    = 12,   # adjust as you like
+  height   = 6,    # adjust as you like
+  dpi      = 300
+)
+
+
+
+# save the combined plot
+ggsave(
+  filename = "plots/nPower-combined.png",
+  plot     = nPower_combined,
+  width    = 12,   # adjust as you like
+  height   = 6,    # adjust as you like
+  dpi      = 300
+)
+
+
 ###############################################################################
 legend_inside <- theme(
   legend.position = c(0.99,0.60),
@@ -1076,6 +1118,40 @@ ggsave(
   dpi      = 300
 )
 
+################################
+# turn them into a single grob
+IRATRejection_combined <- grid.arrange(
+  IRATUniformRejection,
+  IRATNUniformRejection,
+  ncol = 2  # two columns side by side
+)
+
+# turn them into a single grob
+IRATPower_combined <- grid.arrange(
+  IRATUniformPower,
+  IRATNUniformPower,
+  ncol = 2  # two columns side by side
+)
+
+# save the combined plot
+ggsave(
+  filename = "plots/IRATRejection-combined.png",
+  plot     = IRATRejection_combined,
+  width    = 12,   # adjust as you like
+  height   = 6,    # adjust as you like
+  dpi      = 300
+)
+
+# save the combined plot
+ggsave(
+  filename = "plots/IRATPower-combined.png",
+  plot     = IRATPower_combined,
+  width    = 12,   # adjust as you like
+  height   = 6,    # adjust as you like
+  dpi      = 300
+)
+
+
 ##########################################################################################
 #SCENARIO 4: ratio rho is varied
 
@@ -1115,6 +1191,11 @@ legend_inside <- theme(
  okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
 
 
+ # reorder rho levels for plotting
+ small_tab$rho <- factor(small_tab$rho, 
+                         levels = c("1:4", "1:3", "1:2", "1:1", "2:1", "3:1", "4:1"))
+ 
+ 
 rhoUniformPower <- ggplot(small_tab, aes(x = rho, y = as.numeric(power), color = method)) +
   geom_line(aes(group = method)) +  # explicitly connect lines by method
   geom_point() +
@@ -1201,7 +1282,10 @@ legend_inside <- theme(
   legend.text = element_text(size = 9))
 
  okabe_ito <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442")
-
+ small_tab$rho <- factor(small_tab$rho, 
+                         levels = c("1:4", "1:3", "1:2", "1:1", "2:1", "3:1", "4:1"))
+ 
+ 
 
 
 rhoNUniformPower <- ggplot(small_tab, aes(x = rho, y = as.numeric(power), color = method)) +
@@ -1256,6 +1340,40 @@ ggsave(
   height   = 6,    # adjust as you like
   dpi      = 300
 )
+
+# turn them into a single grob
+rhoRejection_combined <- grid.arrange(
+  rhoUniformRejection,
+  rhoNUniformRejection,
+  ncol = 2  # two columns side by side
+)
+
+# turn them into a single grob
+rhoPower_combined <- grid.arrange(
+  rhoUniformPower,
+  rhoNUniformPower,
+  ncol = 2  # two columns side by side
+)
+
+# save the combined plot
+ggsave(
+  filename = "plots/rhoRejection-combined.png",
+  plot     = rhoRejection_combined,
+  width    = 12,   # adjust as you like
+  height   = 6,    # adjust as you like
+  dpi      = 300
+)
+
+# save the combined plot
+ggsave(
+  filename = "plots/rhoPower-combined.png",
+  plot     = rhoPower_combined,
+  width    = 12,   # adjust as you like
+  height   = 6,    # adjust as you like
+  dpi      = 300
+)
+
+
 
 
 
@@ -1447,6 +1565,41 @@ ggsave(
 
 
 
+# turn them into a single grob
+difSizeRejection_combined <- grid.arrange(
+  difSizeUniformRejection,
+  difSizeNUniformRejection,
+  ncol = 2  # two columns side by side
+)
+
+# turn them into a single grob
+difSizePower_combined <- grid.arrange(
+  difSizeUniformPower,
+  difSizeNUniformPower,
+  ncol = 2  # two columns side by side
+)
+
+# save the combined plot
+ggsave(
+  filename = "plots/difSizeRejection-combined.png",
+  plot     = difSizeRejection_combined,
+  width    = 12,   # adjust as you like
+  height   = 6,    # adjust as you like
+  dpi      = 300
+)
+
+
+
+# save the combined plot
+ggsave(
+  filename = "plots/ifSizePower-combined.png",
+  plot     = difSizePower_combined,
+  width    = 12,   # adjust as you like
+  height   = 6,    # adjust as you like
+  dpi      = 300
+)
+
+
 
 ##################################################################################
 ################################################################################¨
@@ -1626,5 +1779,6 @@ ggplot(results_extracted, aes(x = as.numeric(N), y = as.numeric(vote_ratio), col
   labs(x = "Number of respondents N", y = "Vote Ratio", color = "Method") +
   theme_minimal(base_size = 14) +
   legend_inside
+
 
 
